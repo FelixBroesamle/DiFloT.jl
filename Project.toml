@@ -1,7 +1,7 @@
 name = "DiFloT"
 uuid = "a7a134a2-1337-4553-a04b-e129f998bfc5"
-authors = ["Felix Broesamle <felix.broesamle@kit.edu>"]
 version = "0.1.0"
+authors = ["Felix Broesamle <felix.broesamle@kit.edu>"]
 
 [deps]
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
