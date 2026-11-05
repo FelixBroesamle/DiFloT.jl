@@ -37,7 +37,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 ### Gurobi Optional
 
-ToDo.
+ToDo. Gurobi is optional.
 
 ### Running the Example Workflows
 
