@@ -21,8 +21,7 @@ jobs:
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
       - name: Warm Conda/Python (OR-Tools bootstrap)
-        shell: julia --color=yes {0}
-        run: using DiFloT
+        run: julia --project=. -e 'using DiFloT'
       - uses: julia-actions/julia-docdeploy@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
