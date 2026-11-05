@@ -49,7 +49,7 @@ function solve_qf_intp(net, s::Int, t::Int, F::Number; solver::String="HiGHS", s
     isinf(T0f) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     T0 = round(Int, T0f)
 
-    mf = ORToolsBackend.solve_max_flow(net, s, t)
+    mf = compute_max_static_flow(net, s, t)
     (mf.status != STATUS_OPTIMAL || mf.value == 0) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     gmax = Float64(mf.value)
 
@@ -112,7 +112,7 @@ function solve_qf_intsg(net, s::Int, t::Int, F::Number; solver::String="HiGHS", 
     isinf(T0f) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     T0 = round(Int, T0f)
 
-    mf = ORToolsBackend.solve_max_flow(net, s, t)
+    mf = compute_max_static_flow(net, s, t)
     (mf.status != STATUS_OPTIMAL || mf.value == 0) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     gmax = Float64(mf.value)
 

@@ -11,7 +11,7 @@ function solve_qf_ibs(net, s::Int, t::Int, F::Number; solver::String="HiGHS", so
     isinf(T0f) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     T0 = Int64(round(T0f))
 
-    mf = ORToolsBackend.solve_max_flow(net, s, t)
+    mf = compute_max_static_flow(net, s, t)
     (mf.status != STATUS_OPTIMAL || mf.value == 0) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     gmax = Int64(mf.value)
 

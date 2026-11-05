@@ -6,14 +6,19 @@ using ..DiFloT: NetworkInstance, Edge, MCCPResult, c_rate_bound, STATUS_OPTIMAL,
 const pygraph_mcf = PythonCall.pynew()
 const pygraph_mf  = PythonCall.pynew()
 const pynp        = PythonCall.pynew()
+const _initialized = Ref(false)
 
-function __init__()
-    PythonCall.pycopy!(pygraph_mcf, pyimport("ortools.graph.python.min_cost_flow"))
-    PythonCall.pycopy!(pygraph_mf,  pyimport("ortools.graph.python.max_flow"))
-    PythonCall.pycopy!(pynp,        pyimport("numpy"))
+function init_ortools!()
+    if !_initialized[]
+        PythonCall.pycopy!(pygraph_mcf, pyimport("ortools.graph.python.min_cost_flow"))
+        PythonCall.pycopy!(pygraph_mf,  pyimport("ortools.graph.python.max_flow"))
+        PythonCall.pycopy!(pynp,        pyimport("numpy"))
+        _initialized[] = true
+    end
 end
 
 function solve_max_flow(net, s::Int, t::Int)
+    init_ortools!()
     starts = [e.tail - 1 for e in net.edges]
     ends   = [e.head - 1 for e in net.edges]
     caps   = [e.up       for e in net.edges]
@@ -30,9 +35,10 @@ function solve_max_flow(net, s::Int, t::Int)
 end
 
 function solve_circulation(net, s::Int, t::Int, T::Int)
+    init_ortools!()
     edges = copy(net.edges)
     c_rate = c_rate_bound(net, s, t)
-    push!(edges, Edge(t, s, 0, c_rate, -(T + 1), 0)) # transit_time = cost = -(T+1)
+    push!(edges, Edge(t, s, 0, c_rate, -(T + 1), 0)) 
     
     net_mod = NetworkInstance(net.num_nodes, length(edges), net.nodes, edges, net.problem_type, net.source, net.sink, net.target_value, net.arc_indices)
     

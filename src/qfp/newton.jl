@@ -26,7 +26,8 @@ function solve_qf_newton(net, s::Int, t::Int, F::Number; solver::String="HiGHS",
 
     T0f = compute_shortest_path(net, s, t)
     isinf(T0f) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
-    mf = ORToolsBackend.solve_max_flow(net, s, t)
+    
+    mf = compute_max_static_flow(net, s, t)
     (mf.status != STATUS_OPTIMAL || mf.value == 0) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
     gmax = Float64(mf.value)
 
