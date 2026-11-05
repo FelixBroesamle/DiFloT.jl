@@ -35,6 +35,10 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
+### Gurobi Optional
+
+ToDo.
+
 ### Running the Example Workflows
 
 See the `examples/` directory for Jupyter notebooks and scripts.
@@ -132,11 +136,4 @@ To appear.
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
-
-
-
-
-
-
 
