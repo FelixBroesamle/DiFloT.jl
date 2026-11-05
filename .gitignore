@@ -1,0 +1,10 @@
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+/dics/build/
+/.CondaPkg/
+EOF
+__pycache__/
+.DS_Store
+.vscode/

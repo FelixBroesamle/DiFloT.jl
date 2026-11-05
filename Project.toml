@@ -1,0 +1,33 @@
+name = "DiFloT"
+uuid = "a7a134a2-1337-4553-a04b-e129f998bfc5"
+authors = ["Felix Broesamle <felix.broesamle@kit.edu>"]
+version = "0.1.0"
+
+[deps]
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+
+[weakdeps]
+Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
+
+[extensions]
+DiFloTGurobiExt = "Gurobi"
+
+[compat]
+CondaPkg = "0.2.23"
+Graphs = "1.15.0"
+HiGHS = "1.24.1"
+JuMP = "1.31.2"
+Printf = "1"
+PythonCall = "0.9"
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
