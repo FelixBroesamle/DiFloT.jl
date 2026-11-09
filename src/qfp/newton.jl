@@ -5,7 +5,7 @@ function _eval_param(session::MCCPSession, theta::Float64)
 
     if termination_status(session.model) == MOI.OPTIMAL
         flows = Vector{Float64}(undef, session.net.num_arcs)
-        for (i, e) in enumerate(session.net.edges)
+        for (i, e) in enumerate(session.net.arcs)
             v = JuMP.value(session.x[arc_key(e)])
             flows[i] = abs(v) < 1e-9 ? 0.0 : v
         end

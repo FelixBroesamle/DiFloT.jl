@@ -19,7 +19,7 @@ function MCCPSession(net::NetworkInstance, s::Int, t::Int; solver::String="HiGHS
     set_silent(model)
 
     x = Dict{Tuple{Int,Int,Int},JuMP.VariableRef}()
-    for e in net.edges
+    for e in net.arcs
         k = arc_key(e)
         x[k] = @variable(model, lower_bound=Float64(e.low), upper_bound=Float64(e.up))
     end
@@ -36,7 +36,7 @@ function MCCPSession(net::NetworkInstance, s::Int, t::Int; solver::String="HiGHS
         @constraint(model, inflow == outflow)
     end
 
-    fixed_obj = sum(e.transit_time * x[arc_key(e)] for e in net.edges)
+    fixed_obj = sum(e.transit_time * x[arc_key(e)] for e in net.arcs)
     @objective(model, Min, fixed_obj + 0.0 * x_ret)
 
     return MCCPSession(net, s, t, model, x, x_ret, NaN, nothing)
@@ -64,7 +64,7 @@ function solve_mccp(session::MCCPSession, T::Int; tol::Real=1e-9, force::Bool=fa
     end
 
     flows = Vector{Float64}(undef, session.net.num_arcs)
-    for (i, e) in enumerate(session.net.edges)
+    for (i, e) in enumerate(session.net.arcs)
         v = JuMP.value(session.x[arc_key(e)])
         flows[i] = abs(v) < tol ? 0.0 : v
     end

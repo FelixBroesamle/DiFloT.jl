@@ -16,8 +16,7 @@ function parse_min(filepath::String)
     sink = 0
     nodes = Int[]
     node_seen = Set{Int}()
-    edges = Edge[]
-    arcs = Tuple{Int,Int,Int}[]
+    arcs = Arc[]                     # <--- The ONLY array needed
     pair_counter = Dict{Tuple{Int,Int},Int}()
     arc_indices = Dict{Tuple{Int,Int},Vector{Int}}()
 
@@ -58,7 +57,7 @@ function parse_min(filepath::String)
                         error("Unknown problem keyword '$kw' in $filepath")
                     end
                 end
-                sizehint!(edges, num_arcs)
+                sizehint!(arcs, num_arcs)
 
             elseif tag == "N"
                 nid = parse(Int, String(toks[2]))
@@ -77,9 +76,12 @@ function parse_min(filepath::String)
                 up   = parse(Int, String(toks[5]))
                 tt   = parse(Int, String(toks[6]))
 
+                # 1. Handle parallel arcs (slot)
                 slot = get(pair_counter, (tail, head), -1) + 1
                 pair_counter[(tail, head)] = slot
-                push!(edges, Edge(tail, head, low, up, tt, slot))
+                
+                # 2. Add the Arc struct
+                push!(arcs, Arc(tail, head, low, up, tt, slot))
 
                 for n in (tail, head)
                     if !(n in node_seen)
@@ -88,27 +90,24 @@ function parse_min(filepath::String)
                     end
                 end
 
-                push!(arcs, (tail, head, slot))
-                push!(get!(arc_indices, (tail, head), Int[]), length(edges))
+                # 3. Track the index for the adjacency mapping (NO tuple pushes!)
+                push!(get!(arc_indices, (tail, head), Int[]), length(arcs))
             end
         end
     end
 
     max_seen = isempty(nodes) ? 0 : maximum(nodes)
-    for e in edges
+    for e in arcs
         max_seen = max(max_seen, e.tail, e.head)
     end
     num_nodes = max(num_nodes, max_seen)
 
-    return NetworkInstance(num_nodes, length(edges), sort!(nodes), edges,
+    return NetworkInstance(num_nodes, length(arcs), sort!(nodes), arcs,
                            problem_type, source, sink, target_value, arc_indices)
 end
 
 """
     _format_target(v::Float64) -> String
-
-Format the target value so integers are written without a decimal point
-(e.g., `100` instead of `100.0`), keeping .mdfp / .qfp files idiomatic.
 """
 function _format_target(v::Float64)
     if isinteger(v)
@@ -120,14 +119,6 @@ end
 
 """
     save_min(net::NetworkInstance, filepath::String)
-
-Save a `NetworkInstance` to disk in DIMACS-style format.
-
-- If `net.problem_type == :MIN`, writes `p min <n> <m>` (no target).
-- If `net.problem_type == :MDFP` / `:QFP`, writes
-  `p MDFP <n> <m> <T>` / `p QFP <n> <m> <F>`.
-
-Appends `.mdfp` or `.qfp` automatically if the filepath lacks the extension.
 """
 function save_min(net::NetworkInstance, filepath::String)
     actual_path = filepath
@@ -140,14 +131,13 @@ function save_min(net::NetworkInstance, filepath::String)
         if net.problem_type == :MIN
             println(io, "p min $(net.num_nodes) $(net.num_arcs)")
         else
-            # FIX: always write target_value on processed MDFP/QFP instances
             println(io, "p $(net.problem_type) $(net.num_nodes) $(net.num_arcs) $(_format_target(net.target_value))")
         end
 
         if net.source > 0; println(io, "n $(net.source) 1");  end
         if net.sink   > 0; println(io, "n $(net.sink) -1");   end
 
-        for e in net.edges
+        for e in net.arcs
             println(io, "a $(e.tail) $(e.head) $(e.low) $(e.up) $(e.transit_time)")
         end
     end

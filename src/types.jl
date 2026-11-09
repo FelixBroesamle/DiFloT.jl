@@ -1,7 +1,7 @@
 const STATUS_OPTIMAL = 0
 const STATUS_INFEASIBLE = 1
 
-struct Edge
+struct Arc
     tail::Int
     head::Int
     low::Int
@@ -10,8 +10,8 @@ struct Edge
     parallel_index::Int
 end
 
-Edge(tail::Int, head::Int, low::Int, up::Int, transit_time::Int) =
-    Edge(tail, head, low, up, transit_time, 0)
+Arc(tail::Int, head::Int, low::Int, up::Int, transit_time::Int) =
+    Arc(tail, head, low, up, transit_time, 0)
 
 """
     NetworkInstance
@@ -21,7 +21,7 @@ A static representation of a dynamic network instance.
 # Fields
 - `num_nodes`, `num_arcs`: sizes.
 - `nodes`: node list.
-- `edges`: arcs.
+- `arcs`: arcs.
 - `problem_type`: `:MIN`, `:MDFP`, or `:QFP`.
 - `source`, `sink`: node ids (0 if unset).
 - `target_value`: `T` for MDFP, `F` for QFP (0.0 if unset).
@@ -31,7 +31,7 @@ mutable struct NetworkInstance
     num_nodes::Int
     num_arcs::Int
     nodes::Vector{Int}
-    edges::Vector{Edge}
+    arcs::Vector{Arc}
     problem_type::Symbol
     source::Int
     sink::Int
@@ -52,24 +52,24 @@ function NetworkInstance(
     end_nodes::Vector{Int},
     capacities::Vector{Int}, 
     transit_times::Vector{Int};
-    source::Int=0, 
-    sink::Int=1, 
+    source::Int=1, 
+    sink::Int=2, 
     target_value::Float64=1.0
 )
     @assert length(start_nodes) == length(end_nodes) == length(capacities) == length(transit_times) "Array lengths must match."
     m = length(start_nodes)
     num_nodes = isempty(start_nodes) ? 0 : max(maximum(start_nodes), maximum(end_nodes))
-    edges = Edge[]
+    arcs = Arc[]
     arc_indices = Dict{Tuple{Int,Int},Vector{Int}}()
     for i in 1:m
         tail = start_nodes[i]
         head = end_nodes[i]
         k = (tail, head)
         slot = length(get(arc_indices, k, Int[]))
-        push!(edges, Edge(tail, head, 0, capacities[i], transit_times[i], slot))
+        push!(arcs, Arc(tail, head, 0, capacities[i], transit_times[i], slot))
         push!(get!(arc_indices, k, Int[]), i)
     end
-    return NetworkInstance(num_nodes, m, collect(1:num_nodes), edges,
+    return NetworkInstance(num_nodes, m, collect(1:num_nodes), arcs,
                            :MIN, source, sink, target_value, arc_indices)
 end
 

@@ -1,41 +1,50 @@
 function solve_max_dynamic_flow_te(net, s::Int, t::Int, T::Int)
     n = net.num_nodes
-    starts, ends, caps = Int[], Int[], Int[]
-    s_super = (T + 1) * n
-    t_super = (T + 1) * n + 1
+    s_super = (T + 1) * n + 1
+    t_super = (T + 1) * n + 2
     c_rate = c_rate_bound(net, s, t)
     c_total = (T + 1) * c_rate
 
+    flow_graph = Graphs.SimpleDiGraph(t_super)
+    capacity_matrix = zeros(Float64, t_super, t_super)
+
+    # 1. Holdover arcs
     for v in 1:n, theta in 0:(T-1)
-        push!(starts, theta * n + (v - 1))
-        push!(ends,   (theta + 1) * n + (v - 1))
-        push!(caps,   c_total)
+        u = theta * n + v
+        w = (theta + 1) * n + v
+        Graphs.add_edge!(flow_graph, u, w)
+        capacity_matrix[u, w] += c_total
     end
 
-    for e in net.edges
+    # 2. Network arcs
+    for e in net.arcs
         for theta in 0:(T - e.transit_time)
-            push!(starts, theta * n + (e.tail - 1))
-            push!(ends,   (theta + e.transit_time) * n + (e.head - 1))
-            push!(caps,   e.up)
+            u = theta * n + e.tail
+            w = (theta + e.transit_time) * n + e.head
+            Graphs.add_edge!(flow_graph, u, w)
+            capacity_matrix[u, w] += e.up
         end
     end
 
+    # 3. Super source/sink
     for theta in 0:T
-        push!(starts, s_super); push!(ends, theta * n + (s - 1)); push!(caps, c_rate)
-        push!(starts, theta * n + (t - 1)); push!(ends, t_super); push!(caps, c_rate)
+        # Super source -> s
+        u_src = s_super
+        w_src = theta * n + s
+        Graphs.add_edge!(flow_graph, u_src, w_src)
+        capacity_matrix[u_src, w_src] += c_rate
+
+        # t -> Super sink
+        u_sink = theta * n + t
+        w_sink = t_super
+        Graphs.add_edge!(flow_graph, u_sink, w_sink)
+        capacity_matrix[u_sink, w_sink] += c_rate
     end
 
-    smf = ORToolsBackend.pygraph_mf.SimpleMaxFlow()
-    smf.add_arcs_with_capacity(ORToolsBackend.pynp.array(starts), ORToolsBackend.pynp.array(ends), ORToolsBackend.pynp.array(caps))
-    status = smf.solve(s_super, t_super)
-    
-    if pyconvert(Bool, status == smf.OPTIMAL)
-        val = pyconvert(Int64, smf.optimal_flow())
-        return MDFResult(STATUS_OPTIMAL, Float64(val), Float64[], Tuple{Vector{Int},Float64}[])
-    else
-        return MDFResult(STATUS_INFEASIBLE, 0.0, Float64[], Tuple{Vector{Int},Float64}[])
-    end
+    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s_super, t_super, capacity_matrix)
+    return MDFResult(STATUS_OPTIMAL, Float64(f_val), Float64[], Tuple{Vector{Int},Float64}[])
 end
+
 
 function solve_max_dynamic_flow_te_lp(net, s::Int, t::Int, T::Int, solver::String, solver_method::String)
     model = Model(_optimizer(solver; solver_method=solver_method))
@@ -54,7 +63,7 @@ function solve_max_dynamic_flow_te_lp(net, s::Int, t::Int, T::Int, solver::Strin
         x[k] = @variable(model, lower_bound=0.0, upper_bound=Float64(c_total))
     end
     
-    for (i, e) in enumerate(net.edges)
+    for (i, e) in enumerate(net.arcs)
         for theta in 0:(T - e.transit_time)
             k = (theta * n + e.tail, (theta + e.transit_time) * n + e.head, i)
             x[k] = @variable(model, lower_bound=0.0, upper_bound=Float64(e.up))

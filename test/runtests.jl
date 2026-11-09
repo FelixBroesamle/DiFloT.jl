@@ -6,7 +6,7 @@ using DiFloT
     @testset "Types & constants" begin
         @test STATUS_OPTIMAL    == 0
         @test STATUS_INFEASIBLE == 1
-        e = Edge(1, 2, 0, 10, 1)
+        e = Arc(1, 2, 0, 10, 1)
         @test (e.tail, e.head, e.low, e.up, e.transit_time, e.parallel_index) ==
               (1, 2, 0, 10, 1, 0)
     end
@@ -16,7 +16,7 @@ using DiFloT
                               [10, 5, 10, 10], [1, 2, 1, 1])
         @test net.num_nodes == 4
         @test net.num_arcs  == 4
-        @test length(net.edges) == 4
+        @test length(net.arcs) == 4
         @test length(net.arc_indices[(1, 2)]) == 1
     end
 

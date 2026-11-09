@@ -8,14 +8,14 @@ function solve_qf_lp(net, s::Int, t::Int, F::Number; solver::String="HiGHS", sol
     set_silent(model)
 
     x = Dict{Tuple{Int,Int,Int},JuMP.VariableRef}()
-    for e in net.edges
+    for e in net.arcs
         k = arc_key(e)
         x[k] = @variable(model, lower_bound=0.0)
     end
     theta = @variable(model, lower_bound=0.0)
 
     # The objective is exactly the continuous time horizon T_cont*
-    @objective(model, Min, F * theta + sum(e.transit_time * x[arc_key(e)] for e in net.edges))
+    @objective(model, Min, F * theta + sum(e.transit_time * x[arc_key(e)] for e in net.arcs))
 
     in_keys, out_keys = incidence_mapping(net)
     for v in 1:net.num_nodes
@@ -23,7 +23,7 @@ function solve_qf_lp(net, s::Int, t::Int, F::Number; solver::String="HiGHS", sol
         @constraint(model, sum(x[k] for k in out_keys[v]; init=0.0) - sum(x[k] for k in in_keys[v]; init=0.0) == rhs)
     end
 
-    for e in net.edges
+    for e in net.arcs
         @constraint(model, x[arc_key(e)] <= e.up * theta)
     end
 

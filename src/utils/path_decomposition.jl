@@ -19,7 +19,7 @@ function decompose_flow_into_paths(net::NetworkInstance, s::Int, t::Int, flow::V
             u = pop!(stack)
             for ei in out_edges[u]
                 if f[ei] > 1e-6
-                    v = net.edges[ei].head
+                    v = net.arcs[ei].head
                     if !visited[v]
                         visited[v]     = true
                         parent_edge[v] = ei
@@ -39,7 +39,7 @@ function decompose_flow_into_paths(net::NetworkInstance, s::Int, t::Int, flow::V
             ei = parent_edge[curr]
             pushfirst!(path_edges, ei)
             bottleneck = min(bottleneck, f[ei])
-            curr       = net.edges[ei].tail
+            curr       = net.arcs[ei].tail
         end
         push!(paths, (path_edges, bottleneck))
         for ei in path_edges

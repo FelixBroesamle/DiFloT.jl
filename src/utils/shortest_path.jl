@@ -8,7 +8,7 @@ function compute_shortest_path(net::NetworkInstance, s::Int, t::Int)
     if s == t; return 0.0; end
     g = Graphs.SimpleDiGraph(net.num_nodes)
     distmx = fill(Inf, net.num_nodes, net.num_nodes)
-    for e in net.edges
+    for e in net.arcs
         Graphs.add_edge!(g, e.tail, e.head)
         c = Float64(e.transit_time)
         if c < distmx[e.tail, e.head]

@@ -8,9 +8,8 @@ import JuMP
 using JuMP: Model, VariableRef, @variable, @constraint, @objective,
             optimize!, termination_status, objective_value, value,
             set_silent, set_optimizer_attribute, MOI
-using PythonCall
 
-# Core definitions and types (MUST BE FIRST)
+# Core definitions and types
 include("types.jl")
 include("parser.jl")
 
@@ -22,7 +21,6 @@ include("utils/shortest_path.jl")
 include("utils/path_decomposition.jl")
 
 # Backends
-include("backends/ortools.jl")
 include("backends/mccp_model.jl")
 
 # MDF Algorithms
@@ -41,8 +39,10 @@ include("qfp/lp.jl")
 include("direct.jl")
 
 # Exports
-export Edge, NetworkInstance
-export parse_min, save_min, solve_max_dynamic_flow, solve_quickest_flow, solve_quickest_flow_from_file
+export Arc, NetworkInstance
+export parse_min, save_min
+export solve_max_dynamic_flow, solve_quickest_flow
+export solve_quickest_flow_from_file, solve_max_dynamic_flow_from_file
 export MDFResult, QFResult, STATUS_OPTIMAL, STATUS_INFEASIBLE
 export compute_shortest_path, compute_max_static_flow
 

@@ -1,3 +1,5 @@
+using GraphsFlows
+
 function _gurobi_optimizer(::String)
     error("Gurobi.jl is not loaded. Add and load it first:\n" *
           "    using Pkg; Pkg.add(\"Gurobi\")\n" *
@@ -43,30 +45,21 @@ end
 """
     compute_max_static_flow(net, s, t)
 
-Returns the maximum static flow value `g_max` using HiGHS (no Python required).
+Returns the maximum static flow value `g_max`.
 """
-function compute_max_static_flow(net, s::Int, t::Int)
-    model = Model(_optimizer("HiGHS", solver_method="primal"))
-    set_silent(model)
+function compute_max_static_flow(net::NetworkInstance, s::Int, t::Int)
+    n = net.num_nodes
+    flow_graph = Graphs.SimpleDiGraph(n)
+    capacity_matrix = zeros(Float64, n, n)
     
-    x = Dict{Tuple{Int,Int,Int},JuMP.VariableRef}()
-    for e in net.edges
-        k = arc_key(e)
-        x[k] = @variable(model, lower_bound=Float64(e.low), upper_bound=Float64(e.up))
+    for e in net.arcs
+        if e.tail != e.head # Ignore self-loops
+            Graphs.add_edge!(flow_graph, e.tail, e.head)
+            capacity_matrix[e.tail, e.head] += e.up # Sum parallel capacities
+        end
     end
     
-    in_keys, out_keys = incidence_mapping(net)
-    for v in 1:net.num_nodes
-        if v == s || v == t; continue; end
-        @constraint(model, sum(x[k] for k in in_keys[v]; init=0.0) == sum(x[k] for k in out_keys[v]; init=0.0))
-    end
-    
-    @objective(model, Max, sum(x[k] for k in out_keys[s]; init=0.0))
-    optimize!(model)
-    
-    if termination_status(model) == MOI.OPTIMAL
-        return (status = STATUS_OPTIMAL, value = objective_value(model))
-    else
-        return (status = STATUS_INFEASIBLE, value = 0.0)
-    end
+    # GraphsFlows.maximum_flow returns (flow_value, flow_matrix)
+    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s, t, capacity_matrix)
+    return (status = STATUS_OPTIMAL, value = f_val)
 end

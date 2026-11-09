@@ -1,26 +1,33 @@
 # DiFloT.jl
 
-**DiFloT.jl** (**Di**screte **Flo**ws over **T**ime) is a high-performance Julia package for solving the discrete-time Maximum Dynamic Flow Problem (MDFP) and Quickest Flow Problem (QFP).
+[![CI](https://github.com/FelixBroesamle/DiFloT.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FelixBroesamle/DiFloT.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/FelixBroesamle/DiFloT.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/FelixBroesamle/DiFloT.jl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Julia Version](https://img.shields.io/badge/julia-1.10%2B-blue)](https://julialang.org/)
+
+**A high-performance Julia solver for the Maximum Dynamic Flow Problem (MDFP) and Quickest Flow Problem (QFP) in Discrete Time.**
+
+**DiFloT.jl** (**Di**screte **Flo**ws over **T**ime) is designed for researchers in Operations Research, Network Optimization, and Mathematical Programming and for researchers and practitioners in areas of applications, such as Evacuation Planning, Supply Chain Optimizatoin, and Data Transmission. It provides highly optimized, state-of-the-art algorithms for solving dynamic flow problems over discrete time horizons.
 
 ## Key Features
 
-It implements the following solution methods:
-1. For the MDFP:
+- **Maximum Dynamic Flow Problem (MDFP)**:
     - The Ford-Fulkerson Algorithm (`"FF"`).
     - Solving the Problem on the time-expanded network (`"TE"`).
-2. For the QFP:
-    - A standard binary search (`"BS"`).
+- **Quickest Flow Problem (QFP)**:
+    - Standard binary search (`"BS"`).
     - Improved binary search (`"IBS"`).
     - Interpolation search (`"INT"`) and a safeguarded Interpolation search (`"INT-SG"`).
     - Newton search (`"NEWT"`).
     - Lin-Jaillet LP formulation (`"LP"`).
+- **DIMACS Compatible**: Parses `.min` networks and introduces `.mdfp` and `.qfp` formats to standardize dynamic flow instances.
 
 ## Installation
 
 ### Standard installation
 ```julia
 using Pkg
-Pkg.add("DiFloT")
+Pkg.add("https://github.com/FelixBroesamle/DiFloT.jl")
 ```
 
 ### Building from Source
@@ -35,13 +42,31 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-### Gurobi Optional
+### Optional Gurobi Support
 
-ToDo. Gurobi is optional.
+By default, `DiFloT.jl` uses the open-source HiGHS solver. If you have a Gurobi license and wish to use it, simply add and load Gurobi in your environment:
+
+```julia
+using Pkg; Pkg.add("Gurobi")
+using DiFloT, Gurobi
+# Now you can pass solver="Gurobi"
+```
 
 ### Running the Example Workflows
 
-See the `examples/` directory for Jupyter notebooks and scripts.
+The repository includes demo scripts and datasets in the `data/` and `examples/` directories.
+
+```bash
+# Run the quickstart tutorial
+julia --project=. examples/quickstart.jl
+
+# Generate .mdfp and .qfp instances from base .min files
+julia --project=. examples/generate_instances.jl
+
+# Run (small / illustrative) benchmarks for MDFP and QFP
+julia --project=. examples/benchmark_mdfp.jl
+julia --project=. examples/benchmark_qfp.jl
+```
 
 
 ## Quick Start
@@ -57,19 +82,24 @@ tts    = [1, 2, 1, 1]
 net = NetworkInstance(starts, ends, caps, tts)
 
 # 2. Solve Maximum Dynamic Flow (MDFP)
-mdf = solve_max_dynamic_flow(net, 1, 4, 10; method="FF", solver="HiGHS")
+s = 1
+t = 4
+time_horizon = 10
+mdf = solve_max_dynamic_flow(net, s, t, time_horizon; method="FF")
 println("Max Flow: ", mdf.value)
 
 # 3. Solve Quickest Flow Problem (QFP)
-qf = solve_quickest_flow(net, 1, 4, 20; method="IBS", solver="HiGHS")
+f_value = 20
+qf = solve_quickest_flow(net, s, t, f_value; method="IBS")
 println("Quickest Time: ", qf.time_T)
 ```
 
-## File Format
+## File Formats
 
 `DiFloT.jl` uses a DIMACS-style format, separated by file extension for the two problem classes:
-- `.mdfp` for Maximum Dynamic Flow instances.
-- `.qfp` for Quickest Flow instances.
+- `.min`: Standard DIMACS format.
+- `.mdfp`: Extension to Maximum Dynamic Flow instances. Includes the time horizon `T` in the `p` line.
+- `.qfp`: Extension to Quickest Flow instances. Includes the flow value `F` in the `p` line.
 
 The `p` line defines the problem type, dimensions and problem parameter (`T`, the time-horizon for the MDFP, and `F`, the flow value for the QFP). The `n` lines define the source (`1`) and sink (`-1`). The `a` lines represent `(tail, head, lower_bound, capacity, transit_time)`.
 
@@ -94,36 +124,61 @@ a 1 3 0 5 3
 
 ## End-to-End Optimization Workflows
 
-### From File
+The file-based solvers allow you to load instances directly from disk. `DiFloT.jl` will automatically parse the parameter `T` or `F` from `.mdfp` / `.qfp` files.
+
+### Workflow 1: From File (Auto-detect parameters)
+
+When loading a `.mdfp` or `.qfp` file, `DiFloT.jl` automatically extracts the source, sink, and target values (`T` or `F`) directly from the file headers.
 
 ```julia
-net = parse_min("network.min")
-res = solve_max_dynamic_flow(net, s=1, t=3, T=10)
+using DiFloT
+
+# Loads the problem and automatically extracts T from the file
+res = solve_max_dynamic_flow_from_file("data/network.mdfp", s=1, t=3)
+
+# Loads the problem and automatically extracts F from the file
+res_qf = solve_quickest_flow_from_file("data/network.qfp", s=1, t=3)
 ```
 
-### In-Memory Generation
+### Workflow 2: From File (Override parameters)
 
-You can define networks directly using arrays:
+If you load a `.min` file (and interpret the costs as transit times) or want to override the values in the file, simply pass `T` or `F` explicitly:
 
 ```julia
-start_nodes = [1, 1, 2, 2, 3]
-end_nodes   = [2, 3, 3, 4, 4]
-capacities  = [15, 8, 20, 4, 10]
-transit_times = [4, 4, 2, 2, 6]
+# Overrides the time horizon in the .mdfp file with T=50
+res = solve_max_dynamic_flow_from_file("data/network.mdfp", 1, 3, 50)
 
-net = NetworkInstance(4, start_nodes, end_nodes, capacities, transit_times)
-res = solve_quickest_flow(net, 1, 4, 50.0, method="IBS")
+# Solves a .min file by providing T manually
+res_min = solve_max_dynamic_flow_from_file("data/base.min", 1, 3, 20)
+```
+
+### Workflow 3: In-Memory Generation
+
+For integration into larger pipelines, you can build a `NetworkInstance` directly from arrays and pass it to the solvers.
+
+```julia
+using DiFloT
+
+# Define a network directly via arrays (Tail, Head, Capacity, Transit Time)
+starts = [1, 1, 2, 3]
+ends   = [2, 3, 4, 4]
+caps   = [10, 5, 10, 10]
+tts    = [1, 2, 1, 1]
+
+# 1. Build the NetworkInstance
+net = NetworkInstance(starts, ends, caps, tts)
+
+# 2. Solve MDFP (T=10)
+mdf = solve_max_dynamic_flow(net, 1, 4, 10; method="FF")
+
+# 3. Solve QFP (F=20)
+qf = solve_quickest_flow(net, 1, 4, 20; method="IBS")
 ```
 
 ## Citing
 
-If you use `DiFloT.jl` in your research, please cite the following paper for the methodologies:
+If you use `DiFloT.jl` in your research, please cite the following paper:
 
-```text
-To appear.
-```
-
-And the following paper for citing the Software:
 ```text
 To appear.
 ```
