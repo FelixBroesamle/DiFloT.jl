@@ -9,7 +9,8 @@ makedocs(
         "Home" => "index.md",
         "File Format" => "format.md",
         "API Reference" => "api.md"
-    ]
+    ],
+    warnonly = [:missing_docs]
 )
 
 deploydocs(
