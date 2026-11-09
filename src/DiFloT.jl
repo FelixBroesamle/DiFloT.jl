@@ -2,6 +2,9 @@ module DiFloT
 
 using Printf
 using Graphs
+using GraphsFlows
+using SparseArrays
+using SimpleWeightedGraphs
 import HiGHS
 #import Gurobi
 import JuMP
@@ -14,7 +17,8 @@ include("types.jl")
 include("parser.jl")
 
 # Utilities
-include("utils/misc.jl")
+include("utils/optimizer.jl")
+include("utils/max_flow.jl")
 include("utils/mappings.jl")
 include("utils/capacity_bounds.jl")
 include("utils/shortest_path.jl")

@@ -1,51 +1,80 @@
+"""
+    solve_max_dynamic_flow_te(net, s, t, T)
+
+Solves the MDFP using a Time-Expanded network and a highly optimized Sparse Matrix
+with Dinic's Algorithm from `GraphsFlows.jl`.
+
+# Arguments
+- `net`: The `NetworkInstance`.
+- `s`: The source node.
+- `t`: The sink node.
+- `T`: The time horizon.
+
+# Returns
+An `MDFResult`.
+"""
 function solve_max_dynamic_flow_te(net, s::Int, t::Int, T::Int)
     n = net.num_nodes
     s_super = (T + 1) * n + 1
     t_super = (T + 1) * n + 2
+    num_nodes_te = t_super
     c_rate = c_rate_bound(net, s, t)
-    c_total = (T + 1) * c_rate
+    c_total = Float64((T + 1) * c_rate)
 
-    flow_graph = Graphs.SimpleDiGraph(t_super)
-    capacity_matrix = zeros(Float64, t_super, t_super)
+    # Arrays for Sparse Matrix Construction
+    I = Int[]
+    J = Int[]
+    V = Float64[]
+
+    # Helper to add to sparse arrays
+    function add_arc!(u, v, cap)
+        push!(I, u); push!(J, v); push!(V, Float64(cap))
+    end
 
     # 1. Holdover arcs
     for v in 1:n, theta in 0:(T-1)
-        u = theta * n + v
-        w = (theta + 1) * n + v
-        Graphs.add_edge!(flow_graph, u, w)
-        capacity_matrix[u, w] += c_total
+        add_arc!(theta * n + v, (theta + 1) * n + v, c_total)
     end
 
     # 2. Network arcs
     for e in net.arcs
         for theta in 0:(T - e.transit_time)
-            u = theta * n + e.tail
-            w = (theta + e.transit_time) * n + e.head
-            Graphs.add_edge!(flow_graph, u, w)
-            capacity_matrix[u, w] += e.up
+            add_arc!(theta * n + e.tail, (theta + e.transit_time) * n + e.head, e.up)
         end
     end
 
     # 3. Super source/sink
     for theta in 0:T
-        # Super source -> s
-        u_src = s_super
-        w_src = theta * n + s
-        Graphs.add_edge!(flow_graph, u_src, w_src)
-        capacity_matrix[u_src, w_src] += c_rate
-
-        # t -> Super sink
-        u_sink = theta * n + t
-        w_sink = t_super
-        Graphs.add_edge!(flow_graph, u_sink, w_sink)
-        capacity_matrix[u_sink, w_sink] += c_rate
+        add_arc!(s_super, theta * n + s, c_rate)
+        add_arc!(theta * n + t, t_super, c_rate)
     end
 
-    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s_super, t_super, capacity_matrix)
+    # Build Sparse Matrix
+    capacity_matrix = sparse(I, J, V, num_nodes_te, num_nodes_te)
+    flow_graph = Graphs.SimpleDiGraph(capacity_matrix)
+
+    # Run Dinic's Algorithm
+    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s_super, t_super, capacity_matrix, algorithm=GraphsFlows.DinicAlgorithm())
+    
     return MDFResult(STATUS_OPTIMAL, Float64(f_val), Float64[], Tuple{Vector{Int},Float64}[])
 end
 
+"""
+    solve_max_dynamic_flow_te_lp(net, s, t, T, solver, solver_method)
 
+Solves the MDFP using a Time-Expanded network formulated as a Linear Program.
+
+# Arguments
+- `net`: The `NetworkInstance`.
+- `s`: The source node.
+- `t`: The sink node.
+- `T`: The time horizon.
+- `solver`: The JuMP solver backend (`"HiGHS"` or `"Gurobi"`).
+- `solver_method`: The internal solver method (`"primal"`, `"dual"`, etc.).
+
+# Returns
+An `MDFResult`.
+"""
 function solve_max_dynamic_flow_te_lp(net, s::Int, t::Int, T::Int, solver::String, solver_method::String)
     model = Model(_optimizer(solver; solver_method=solver_method))
     set_silent(model)

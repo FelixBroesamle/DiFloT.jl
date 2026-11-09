@@ -35,8 +35,8 @@ function solve_qf_ibs(net, s::Int, t::Int, F::Number; solver::String="HiGHS", so
         v_u, g_u = round(Int64, ru.v), round(Int64, ru.g)
         denom = Int128(v_u - v_l)
         alpha = denom > 0 ? Tl + Int64(cld(Int128(Tu - Tl) * Int128(Fq - v_l), denom)) : Tl + 1
-        sigma_l = g_l > 0 ? Tl + fld(Fq - v_l, g_l) : typemax(Int64)
-        sigma_u = g_u > 0 ? Tu + fld(Fq - v_u, g_u) : typemax(Int64)
+        sigma_l = g_l > 0 ? Tl + cld(Fq - v_l, g_l) : typemax(Int64)
+        sigma_u = g_u > 0 ? Tu + cld(Fq - v_u, g_u) : typemax(Int64)
         beta    = min(sigma_l, sigma_u)
 
         lo_c = max(Tl + 1, min(Tu - 1, alpha))

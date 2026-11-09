@@ -2,3 +2,4 @@
 
 ```@autodocs
 Modules = [DiFloT]
+Public = false

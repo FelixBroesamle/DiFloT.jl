@@ -6,12 +6,12 @@ authors = ["Felix Broesamle <felix.broesamle@kit.edu>"]
 [deps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 GraphsFlows = "06909019-6f44-4949-96fc-b9d9aaa02889"
+Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-
-[weakdeps]
-Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
+SimpleWeightedGraphs = "47aef6b3-ad0c-573a-a1e2-d07658019622"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [extensions]
 DiFloTGurobiExt = "Gurobi"
@@ -23,6 +23,8 @@ Gurobi = "1.9"
 HiGHS = "1.24.1"
 JuMP = "1.31.2"
 Printf = "1"
+SimpleWeightedGraphs = "1.6.0"
+SparseArrays = "1.13.0"
 julia = "1.10"
 
 [extras]

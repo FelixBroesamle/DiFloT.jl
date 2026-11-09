@@ -185,8 +185,9 @@ To appear.
 
 ## Resources
 
-- Documentation: (To appear). [https://FelixBroesamle.github.io/DiFloT.jl/](https://FelixBroesamle.github.io/DiFloT.jl/).
+- Documentation: [https://FelixBroesamle.github.io/DiFloT.jl/](https://FelixBroesamle.github.io/DiFloT.jl/).
 - Package: [https://github.com/FelixBroesamle/DiFloT.jl](https://github.com/FelixBroesamle/DiFloT.jl).
+
 
 ## License
 

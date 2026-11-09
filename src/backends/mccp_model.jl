@@ -48,13 +48,13 @@ end
 Solves the parametric minimum cost circulation for a given time horizon `T`.
 """
 function solve_mccp(session::MCCPSession, T::Int; tol::Real=1e-9, force::Bool=false)
-    α = Float64(-(T + 1))
-    if !force && session.last_coefficient == α && session.last_result !== nothing
+    a = Float64(-(T + 1))
+    if !force && session.last_coefficient == a && session.last_result !== nothing
         return session.last_result
     end
 
-    JuMP.set_objective_coefficient(session.model, session.x_ret, α)
-    session.last_coefficient = α
+    JuMP.set_objective_coefficient(session.model, session.x_ret, a)
+    session.last_coefficient = a
     JuMP.optimize!(session.model)
 
     st = termination_status(session.model)

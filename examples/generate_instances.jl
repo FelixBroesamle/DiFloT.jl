@@ -1,7 +1,7 @@
 using DiFloT
 
 function generate_instances()
-    files = ["diflot_netgen_1_10.min", "diflot_netgen_1_100.min"]
+    files = ["diflot_netgen_1_10.min", "diflot_gridgen_1_10.min", "diflot_gridgen_2_10.min"]
     data_dir = joinpath(@__DIR__, "..", "data")
     
     for file in files
