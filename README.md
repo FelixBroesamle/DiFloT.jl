@@ -27,7 +27,7 @@
 ### Standard installation
 ```julia
 using Pkg
-Pkg.add("https://github.com/FelixBroesamle/DiFloT.jl")
+Pkg.add(url="https://github.com/FelixBroesamle/DiFloT.jl")
 ```
 
 ### Building from Source

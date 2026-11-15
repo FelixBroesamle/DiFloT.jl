@@ -36,7 +36,7 @@ a 2 3 0 10 1
 a 1 3 0 5 3
 ```
 
-The `p` line format is: `p MDFP <num_nodes> <num_arcs> <time_horizon_T>
+The `p` line format is: `p MDFP <num_nodes> <num_arcs> <time_horizon_T>`.
 
 ### 3. The Quickest Flow Format (.qfp)
 
@@ -52,9 +52,7 @@ a 2 3 0 10 1
 a 1 3 0 5 3
 ```
 
-The `p` line format is: `p QFP <num_nodes> <num_arcs> <target_flow_F>
-
-##
+The `p` line format is: `p QFP <num_nodes> <num_arcs> <target_flow_F>`.
 
 
 
