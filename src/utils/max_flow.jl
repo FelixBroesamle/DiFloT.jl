@@ -13,6 +13,8 @@ with Sparse Matrices and Dinic's Algorithm for optimal performance.
 
 # Returns
 A `NamedTuple` with fields `status` (`STATUS_OPTIMAL` or `STATUS_INFEASIBLE`) and `value` (the maximum flow).
+`value` is exact: since all capacities are integers, the max-flow value is integral, and we round the (float)
+result to the nearest integer.
 """
 function compute_max_static_flow(net::NetworkInstance, s::Int, t::Int)
     n = net.num_nodes
@@ -36,5 +38,5 @@ function compute_max_static_flow(net::NetworkInstance, s::Int, t::Int)
     
     # Run Dinic's Algorithm on the sparse matrix
     f_val, _ = GraphsFlows.maximum_flow(flow_graph, s, t, capacity_matrix, algorithm=GraphsFlows.PushRelabelAlgorithm())
-    return (status = STATUS_OPTIMAL, value = f_val)
+    return (status = STATUS_OPTIMAL, value = round(Int64, f_val))
 end

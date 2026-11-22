@@ -140,5 +140,30 @@ using DiFloT
             @test res.status == STATUS_INFEASIBLE
         end
     end
+
+    let starts = [1, 1, 2, 3], ends = [2, 3, 4, 4],
+        caps   = [10, 10, 10, 10], tts = [1, 1, 1, 1]
+
+        net = NetworkInstance(starts, ends, caps, tts)
+    
+        @testset "Integer precision" begin
+            # (a) Large F: forces multiple BS iterations
+            res = solve_quickest_flow(net, 1, 4, 197; method="BS", solver="HiGHS")
+            @test res.status == STATUS_OPTIMAL
+            @test res.time_T == 11.0   # v(10)=180 < 197, v(11)=200 >= 197
+
+            # (b) BS = IBS on all F in a range
+            for F in 20:1:200
+                r_bs  = solve_quickest_flow(net, 1, 4, F; method="BS",  solver="HiGHS")
+                r_ibs = solve_quickest_flow(net, 1, 4, F; method="IBS", solver="HiGHS")
+                @test r_bs.time_T == r_ibs.time_T
+            end
+
+            # (c) MDFP with T smaller than d(s,t): must return 0
+            res = solve_max_dynamic_flow(net, 1, 4, 1; method="FF", solver="HiGHS")
+            @test res.value == 0.0
+            @test res.status == STATUS_OPTIMAL
+        end 
+    end
 end
 
