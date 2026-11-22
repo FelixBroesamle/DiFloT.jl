@@ -22,7 +22,7 @@ function solve_max_dynamic_flow_from_file(filepath::String;
     actual_T = T
     if isnothing(actual_T)
         if net.problem_type == :MDFP
-            actual_T = Int(net.target_value)
+            actual_T = round(Int, net.target_value)
         else
             error("File is not an .mdfp instance (Found: $(net.problem_type)). Please provide a time horizon `T` explicitly.")
         end

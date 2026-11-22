@@ -15,6 +15,11 @@ Solves the Maximum Dynamic Flow Problem (MDFP).
 An `MDFResult` containing the `status`, `value` (maximum flow), and decomposed `paths`.
 """
 function solve_max_dynamic_flow(net, s::Int, t::Int, T::Int; method::String="FF", solver::String="HiGHS", solver_method::String="primal")
+    T0 = compute_shortest_path(net, s, t)
+    if isinf(T0) || T0 > T
+        return MDFResult(STATUS_OPTIMAL, 0.0, Float64[], Tuple{Vector{Int},Float64}[])
+    end
+    
     if method == "FF"
         session = MCCPSession(net, s, t; solver=solver, solver_method=solver_method)
         res = solve_mccp(session, T)
