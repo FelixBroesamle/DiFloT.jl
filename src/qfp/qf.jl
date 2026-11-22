@@ -13,6 +13,8 @@ Solves the Quickest Flow Problem (QFP).
 - `max_iter`, `tol`: Parameters for the inner root-finding in interpolation methods.
 """
 function solve_quickest_flow(net, s::Int, t::Int, F::Number; method::String="INT-SG", solver::String="HiGHS", solver_method::String="primal", max_iter::Int=100, tol::Float64=1e-7)
+    isinteger(F) || throw(ArgumentError("QFP requires integer demand F; got F = $F"))
+    
     if method == "BS"
         return solve_qf_bs(net, s, t, F; solver=solver, solver_method=solver_method)
     elseif method == "IBS"

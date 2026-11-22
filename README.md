@@ -7,7 +7,7 @@
 
 **A high-performance Julia solver for the Maximum Dynamic Flow Problem (MDFP) and Quickest Flow Problem (QFP) in Discrete Time.**
 
-**DiFloT.jl** (**Di**screte **Flo**ws over **T**ime) is designed for researchers in Operations Research, Network Optimization, and Mathematical Programming and for researchers and practitioners in areas of applications, such as Evacuation Planning, Supply Chain Optimizatoin, and Data Transmission. It provides highly optimized, state-of-the-art algorithms for solving dynamic flow problems over discrete time horizons.
+**DiFloT.jl** (**Di**screte **Flo**ws over **T**ime) is designed for researchers in Operations Research, Network Optimization, and Mathematical Programming and for researchers and practitioners in areas of applications, such as Evacuation Planning, Supply Chain Optimization, and Data Transmission. It provides highly optimized, state-of-the-art algorithms for solving dynamic flow problems over discrete time horizons.
 
 ## Key Features
 
