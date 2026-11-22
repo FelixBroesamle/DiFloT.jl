@@ -23,7 +23,7 @@ function benchmark_mdfp()
         
         # 2. Time-Expanded with pure Julia Sparse Dinic
         t_te = @elapsed res_te = solve_max_dynamic_flow(net, s, t_node, T; method="TE", solver="GraphsFlows")
-        @printf("TE (Sparse Dinic)      : %.3fs | Value: %.1f\n", t_te, res_te.value)
+        @printf("TE (Sparse PushRelabel)      : %.3fs | Value: %.1f\n", t_te, res_te.value)
         
         # 3. Time-Expanded with HiGHS LP
         #t_lp = @elapsed res_lp = solve_max_dynamic_flow(net, s, t_node, T; method="TE", solver="HiGHS")
