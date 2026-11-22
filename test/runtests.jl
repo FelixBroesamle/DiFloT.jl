@@ -165,5 +165,37 @@ using DiFloT
             @test res.status == STATUS_OPTIMAL
         end 
     end
+
+    let starts = [1, 1, 2, 3], ends = [2, 3, 4, 4],
+        caps   = [10, 10, 10, 10], tts = [1, 1, 1, 1]
+
+        net = NetworkInstance(starts, ends, caps, tts)
+    
+        @testset "Interpolation search" begin
+
+            # ---- (a) Pure INT must not throw and must agree with BS --------------
+            for F in 20:1:200
+                r_bs  = solve_quickest_flow(net, 1, 4, F; method="BS", solver="HiGHS")
+                r_int = solve_quickest_flow(net, 1, 4, F; method="INT", solver="HiGHS")
+                @test r_int.status == STATUS_OPTIMAL
+                @test r_int.time_T == r_bs.time_T
+            end
+
+            # ---- (b) Safeguarded INT must agree with BS --------------------------
+            for F in 20:1:200
+                r_bs   = solve_quickest_flow(net, 1, 4, F; method="BS",     solver="HiGHS")
+                r_intsg = solve_quickest_flow(net, 1, 4, F; method="INT-SG", solver="HiGHS")
+                @test r_intsg.status == STATUS_OPTIMAL
+                @test r_intsg.time_T == r_bs.time_T
+            end
+
+            # ---- (c) Infeasible instance: g_max = 0 ------------------------------
+            net_inf = NetworkInstance([1, 2], [2, 4], [0, 10], [1, 1])
+            for m in ("INT", "INT-SG")
+                r = solve_quickest_flow(net_inf, 1, 4, 5; method=m, solver="HiGHS")
+                @test r.status == STATUS_INFEASIBLE
+            end
+        end
+    end
 end
 
