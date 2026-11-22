@@ -91,5 +91,54 @@ using DiFloT
         end
     end
 
+    let starts = [1, 1, 2, 3], ends = [2, 3, 4, 4],
+        caps   = [10, 10, 10, 10], tts = [1, 1, 1, 1]
+
+        net = NetworkInstance(starts, ends, caps, tts)
+        @testset "Newton correctness" begin
+            # --- (a) F = 20: early return at T_l = T* = 2 -------------------------
+            #     v(2) = 20, so T_l = 2 and v(T_l) >= F, early exit.
+            res = solve_quickest_flow(net, 1, 4, 20; method="NEWT", solver="HiGHS")
+            @test res.status == STATUS_OPTIMAL
+            @test res.time_T == 2.0
+
+            # --- (b) F = 21: Newton step, then two-step verification -------------
+            #     T_l = 2, v(2) = 20 < 21.
+            #     θ_1 = 2 + 1/20 = 2.05, v(2.05) = 21, |v - F| = 0 < 1, exit loop.
+            #     ⌊2.05⌋ = 2, v(2) = 20 < 21, so return 3.
+            res = solve_quickest_flow(net, 1, 4, 21; method="NEWT", solver="HiGHS")
+            @test res.status == STATUS_OPTIMAL
+            @test res.time_T == 3.0
+
+            # --- (c) F = 39: large Newton step, exit near T* = 3 -----------------
+            #     T_l = 2, v(2) = 20 < 39.
+            #     θ_1 = 2 + 19/20 = 2.95, v(2.95) = 39, exit.
+            #     ⌊2.95⌋ = 2, v(2) < 39, return 3.
+            res = solve_quickest_flow(net, 1, 4, 39; method="NEWT", solver="HiGHS")
+            @test res.status == STATUS_OPTIMAL
+            @test res.time_T == 3.0
+
+            # --- (d) F = 40: exits on integer θ with |v - F| = 0 ------------------
+            #     T_l = 2, θ_1 = 3.0 exactly, v(3) = 40, exit.
+            #     ⌊3⌋ = 3, v(3) = 40 >= 40, return 3.
+            res = solve_quickest_flow(net, 1, 4, 40; method="NEWT", solver="HiGHS")
+            @test res.status == STATUS_OPTIMAL
+            @test res.time_T == 3.0
+
+            # --- (e) Consistency with BS on all F in a small sweep ---------------
+            for F in 20:1:80
+                r_bs   = solve_quickest_flow(net, 1, 4, F; method="BS",   solver="HiGHS")
+                r_newt = solve_quickest_flow(net, 1, 4, F; method="NEWT", solver="HiGHS")
+                @test r_newt.time_T == r_bs.time_T
+                @test r_newt.status == STATUS_OPTIMAL
+            end
+
+            # --- (f) Infeasible instance: g_max = 0 -------------------------------
+            # Arc 1→2 has zero capacity; no flow can leave s.
+            net_inf = NetworkInstance([1, 2], [2, 4], [0, 10], [1, 1])
+            res = solve_quickest_flow(net_inf, 1, 4, 5; method="NEWT", solver="HiGHS")
+            @test res.status == STATUS_INFEASIBLE
+        end
+    end
 end
 
