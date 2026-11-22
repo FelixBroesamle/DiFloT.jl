@@ -197,5 +197,42 @@ using DiFloT
             end
         end
     end
+
+    let starts = [1, 1, 2, 3], ends = [2, 3, 4, 4],
+        caps   = [10, 10, 10, 10], tts = [1, 1, 1, 1]
+
+        net = NetworkInstance(starts, ends, caps, tts)
+    
+        @testset "LP alignment with Algorithm 8" begin
+
+            # ---- (a) Infeasible instance: g_max = 0 → INFEASIBLE --------------
+            net_inf = NetworkInstance([1, 2], [2, 4], [0, 10], [1, 1])
+            r = solve_quickest_flow(net_inf, 1, 4, 5; method="LP", solver="HiGHS")
+            @test r.status == STATUS_INFEASIBLE
+
+            # ---- (b) LP agrees with BS on all small F -------------------------
+            for F in 20:1:200
+                r_bs = solve_quickest_flow(net, 1, 4, F; method="BS", solver="HiGHS")
+                r_lp = solve_quickest_flow(net, 1, 4, F; method="LP", solver="HiGHS")
+                @test r_lp.status == STATUS_OPTIMAL
+                @test r_lp.time_T == r_bs.time_T
+            end
+
+            # ---- (c) Non-integer F is rejected --------------------------------
+            @test_throws ArgumentError solve_quickest_flow(
+                net, 1, 4, 20.5; method="LP", solver="HiGHS")
+
+            # ---- (d) F = 0 is rejected ----------------------------------------
+            @test_throws ArgumentError solve_quickest_flow(
+                net, 1, 4, 0; method="LP", solver="HiGHS")
+
+            # ---- (e) e.low > 0 is rejected ------------------------------------
+            net_low = NetworkInstance([1, 2], [2, 4], [10, 10], [1, 1])
+            # Manually set low=1 on first arc to test the rejection
+            net_low.arcs[1] = Arc(1, 2, 1, 10, 1, 0)
+            @test_throws ArgumentError solve_quickest_flow(
+                net_low, 1, 4, 5; method="LP", solver="HiGHS")
+        end
+    end
 end
 

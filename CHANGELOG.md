@@ -5,9 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this
 
+## [0.1.4] - 2026-11-22
+### Changed
+- Updated the LP based approach to align with the manuscript.
+
 ## [0.1.3] - 2026-11-22
 ### Changed
-- Updated the pure pure interpolation search and safeguarded interpolation search to align with the manuscript.
+- Updated the pure interpolation search and safeguarded interpolation search to align with the manuscript.
 
 ## [0.1.2] - 2026-11-22
 ### Changed

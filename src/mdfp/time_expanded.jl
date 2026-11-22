@@ -53,8 +53,8 @@ function solve_max_dynamic_flow_te(net, s::Int, t::Int, T::Int)
     capacity_matrix = sparse(I, J, V, num_nodes_te, num_nodes_te)
     flow_graph = Graphs.SimpleDiGraph(capacity_matrix)
 
-    # Run Dinic's Algorithm
-    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s_super, t_super, capacity_matrix, algorithm=GraphsFlows.DinicAlgorithm())
+    # Run PushRelabelAlgorithm
+    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s_super, t_super, capacity_matrix, algorithm=GraphsFlows.PushRelabelAlgorithm())
     
     return MDFResult(STATUS_OPTIMAL, Float64(f_val), Float64[], Tuple{Vector{Int},Float64}[])
 end
