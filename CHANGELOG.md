@@ -8,7 +8,11 @@ and this
 
 
 ## [0.1.1] - 2026-11-22
-### 
+### Changed
+- Updated the Newton search method to align with the manuscript.
+
+### Added
+- Added a validation check to ensure that `F` is an integer in QFP.
 
 ## [Unreleased]
 
