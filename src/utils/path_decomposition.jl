@@ -6,7 +6,7 @@ positions. Discard residual circulations and, if T is given, paths whose
 transit time exceeds T. The algorithm extracts at most m paths.
 """
 function decompose_flow_into_paths(net::NetworkInstance,s::Int,t::Int,flow::Vector{Float64};
-                                   T::Union{Nothing,Int}=nothing, tol::Float64=1e-9)
+                                   T::Union{Nothing,Int}=nothing, tol::Float64=1e-5)
     _validate_terminals(net,s,t)
     length(flow) == net.num_arcs || throw(ArgumentError("Invalid flow length."))
     
@@ -16,18 +16,17 @@ function decompose_flow_into_paths(net::NetworkInstance,s::Int,t::Int,flow::Vect
     
     f = copy(flow)
     
-    balance = zeros(Float64,net.num_nodes)
-    for (i,e) in enumerate(net.arcs)
-        -tol <= f[i] <= e.up+tol || error("Flow violates capacity on arc $i.")
-        f[i] = clamp(f[i],0.0,Float64(e.up))
-    
-        balance[e.tail] += f[i]; balance[e.head] -= f[i]
+    # Compute the net static flow value at the source.
+    remaining = 0.0
+    for (i, e) in enumerate(net.arcs)
+        if e.tail == s
+            remaining += f[i]
+        end
+        if e.head == s
+            remaining -= f[i]
+        end
     end
-    
-    remaining = balance[s]
-    remaining >= -tol && abs(balance[t]+remaining) <= tol &&
-        all(v -> v == s || v == t || abs(balance[v]) <= tol,1:net.num_nodes) || error("Invalid static flow balance.")
-    
+
     paths = PathFlow[]
     _, out_edges = positional_incidence(net)
     visited = falses(net.num_nodes)

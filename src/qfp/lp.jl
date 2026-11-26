@@ -72,8 +72,7 @@ function check_lp_candidate(
     F_int = _positive_demand(F)
     _validate_network(net, s, t)
     if candidate.status == STATUS_INFEASIBLE
-        return QFResult(STATUS_INFEASIBLE, -1.0, Float64[], PathFlow[], 0,
-                        candidate.lp_calls, 0)
+        return QFResult(STATUS_INFEASIBLE, -1.0, Float64[], PathFlow[], 0, candidate.lp_calls, 0)
     end
 
     candidate.status == STATUS_OPTIMAL || error("Invalid LP candidate status.")

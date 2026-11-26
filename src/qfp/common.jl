@@ -1,6 +1,9 @@
 _infeasible_qf() = QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
+
 _value(r::MCCPResult) = Int(r.v)  # only for integer-horizon evaluations
+
 _slope(r::MCCPResult) = Int(r.g)
+
 _midpoint(T_l::Int, T_u::Int) = T_l + fld(T_u - T_l, 2)
 
 """Initial lower bound, with MCCP(0) evaluated only if T_0=0."""

@@ -51,8 +51,9 @@ q=(T_u-T)/L, its negative is
 This avoids separately forming a and (T_u-T)^b. The projection guarantees
 an interior integer test point even if the numerical root is inaccurate.
 """
-function _interp_candidate(T_l::Int, T_u::Int, r_l::MCCPResult, r_u::MCCPResult,
-                           F::Int, max_iter::Int, tol::Float64)
+function _interp_candidate(
+    T_l::Int, T_u::Int, r_l::MCCPResult, r_u::MCCPResult, F::Int, max_iter::Int, tol::Float64
+)
     L = T_u - T_l
     v_l, v_u = _value(r_l), _value(r_u)
     g_l, g_u = _slope(r_l), _slope(r_u)
@@ -119,7 +120,7 @@ function _solve_qf_interpolation(
     activations = 0
 
     while T_l + 1 < T_u
-        # Interpolation candidate and tentative bracket length.
+        # Interpolation candidate (rounded and projected) and tentative bracket length.
         L = T_u - T_l
         T_cand = _interp_candidate(T_l, T_u, r_l, r_u, F_int, max_iter, tol)
         r_cand = solve_mccp(session, T_cand)
