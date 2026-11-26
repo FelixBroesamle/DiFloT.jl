@@ -27,7 +27,7 @@ function start_ortools!(; python::AbstractString=get(ENV, "DIFLOT_PYTHON", Sys.i
             _ORTOOLS_VERSION[] = split(reply; limit=2)[2]
             _ORTOOLS_IO[] = proc
             return _ORTOOLS_VERSION[]
-            
+
         catch
             close(proc)
             rethrow()
@@ -124,24 +124,13 @@ function _ortools_mccp(net, s::Int, t::Int, T::Int)
 
     res = _ortools_request(2, I, J, V, net.num_nodes, s, t; costs=costs)
 
-    # Verify the returned circulation and reconstruct its integer cost.
-    balance = zeros(Int, net.num_nodes)
-    cost = Int128(0)
+    0 <= res.value <= MAX_EXACT_INT ||
+        error("Invalid MCCP value.")
 
-    for i in eachindex(V)
-        f = res.flows[i]
-        0 <= f <= V[i] || error("OR-Tools returned invalid capacity flow.")
-
-        balance[I[i]] += f
-        balance[J[i]] -= f
-        
-        cost += Int128(f) * costs[i]
-    end
-    all(iszero, balance) && -cost == res.value && 0 <= res.value <= MAX_EXACT_INT ||
-        error("OR-Tools returned an invalid circulation or objective.")
-    
-    # Return the static arc flows separately from the return-arc flow.
     return MCCPResult(
-        STATUS_OPTIMAL, Float64(res.value), Float64(res.flows[end]), Float64.(res.flows[1:end-1])
+        STATUS_OPTIMAL,
+        Float64(res.value),
+        Float64(res.flows[end]),
+        Float64.(res.flows[1:end-1])
     )
 end

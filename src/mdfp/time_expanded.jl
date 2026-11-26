@@ -74,8 +74,10 @@ function solve_max_dynamic_flow_te_lp(net, s::Int, t::Int, T::Int, solver::Strin
     end
     
     for v in 1:N-2
-        @constraint(model, sum(x[i] for i in incoming[v]; init=0.0) ==
-                          sum(x[i] for i in outgoing[v]; init=0.0))
+        @constraint(
+            model, 
+            sum(x[i] for i in incoming[v]; init=0.0) == sum(x[i] for i in outgoing[v]; init=0.0)
+        )
     end
     
     @objective(model, Max, sum(x[i] for i in outgoing[ss]; init=0.0))

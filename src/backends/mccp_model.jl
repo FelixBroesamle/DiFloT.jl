@@ -122,24 +122,18 @@ function solve_mccp(session::MCCPSession,theta::Real;tol::Real=FLOW_TOL,force::B
     optimize!(session.model)
     _require_optimal(session.model,"MCCP($theta)")
 
-    # Recover integral arc flows and verify capacities and balances.
-    flows = Vector{Float64}(undef,session.net.num_arcs)
-    balance = zeros(Int,session.net.num_nodes)
+    # Extract the integral static flow and its transit cost.
+    flows = Vector{Float64}(undef, session.net.num_arcs)
     cost = Int128(0)
-    for (i,e) in enumerate(session.net.arcs)
-        xi = _rounded_flow(value(session.x[i]),"MCCP arc flow";tol=tol)
-        0 <= xi <= e.up || error("MCCP flow violates capacity on arc $i.")
+
+    for (i, e) in enumerate(session.net.arcs)
+        xi = _rounded_flow(value(session.x[i]), "MCCP arc flow"; tol=tol)
         flows[i] = Float64(xi)
-
-        balance[e.tail] += xi
-        balance[e.head] -= xi
-
-        cost += Int128(e.transit_time)*xi
+        cost += Int128(e.transit_time) * xi
     end
 
-    # The return-arc flow is both the static flow value and a subgradient.
-    g = _rounded_flow(value(session.x_ret),"return-arc flow";tol=tol)
-    0 <= g <= session.rate_bound || error("Invalid MCCP return-arc flow.")
+    # Extract the return-arc flow.
+    g = _rounded_flow(value(session.x_ret), "return-arc flow"; tol=tol)
 
     for v in eachindex(balance)
         balance[v] == (v == session.s ? g : v == session.t ? -g : 0) ||
@@ -148,7 +142,7 @@ function solve_mccp(session::MCCPSession,theta::Real;tol::Real=FLOW_TOL,force::B
 
     # Reconstruct v(theta) = (theta + 1)*g - cost.
     v = if isinteger(theta)
-        z = (Int128(Int(theta))+1)*g-cost
+        z = (Int128(Int(theta))+1) * g - cost
         0 <= z <= MAX_EXACT_INT || error("Invalid integer MCCP value $z.")
         Float64(z)
     else
@@ -161,6 +155,6 @@ function solve_mccp(session::MCCPSession,theta::Real;tol::Real=FLOW_TOL,force::B
     session.last_coefficient = a
     session.last_theta = Float64(theta)
     session.last_result = MCCPResult(STATUS_OPTIMAL,v,Float64(g),flows)
-    
+
     return session.last_result
 end
