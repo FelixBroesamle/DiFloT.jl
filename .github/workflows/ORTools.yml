@@ -1,0 +1,35 @@
+name: OR-Tools
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+
+    env:
+      DIFLOT_TEST_ORTOOLS: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install OR-Tools
+        run: python -m pip install ortools==9.12.4544 numpy
+
+      - name: Run integration tests
+        run: julia --project=. --threads=1 -e 'ENV["DIFLOT_PYTHON"] = Sys.which("python"); using Pkg; Pkg.instantiate(); Pkg.test()'
