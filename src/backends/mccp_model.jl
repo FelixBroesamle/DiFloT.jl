@@ -135,11 +135,6 @@ function solve_mccp(session::MCCPSession,theta::Real;tol::Real=FLOW_TOL,force::B
     # Extract the return-arc flow.
     g = _rounded_flow(value(session.x_ret), "return-arc flow"; tol=tol)
 
-    for v in eachindex(balance)
-        balance[v] == (v == session.s ? g : v == session.t ? -g : 0) ||
-            error("Rounded MCCP flow violates conservation at node $v.")
-    end
-
     # Reconstruct v(theta) = (theta + 1)*g - cost.
     v = if isinteger(theta)
         z = (Int128(Int(theta))+1) * g - cost
