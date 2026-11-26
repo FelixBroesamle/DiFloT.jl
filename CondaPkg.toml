@@ -1,0 +1,8 @@
+channels = ["conda-forge"]
+
+[deps]
+python = "==3.11.6"
+
+[pip.deps]
+ortools = "==9.12.4544"
+numpy = ""

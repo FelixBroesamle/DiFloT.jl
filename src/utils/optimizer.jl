@@ -1,37 +1,30 @@
-"""
-    _gurobi_optimizer(::String)
-
-Internal fallback that throws an error if Gurobi is requested but the extension is not loaded.
-"""
-function _gurobi_optimizer(::String)
-    error("Gurobi.jl is not loaded. Add and load it first:\n" *
-          "    using Pkg; Pkg.add(\"Gurobi\")\n" *
-          "    using Gurobi\n" *
-          "then call solve_* with solver=\"Gurobi\".")
+"""Load an optional backend without overwriting a method during precompilation."""
+function _require_extension(name::Symbol, package::String)
+    ext = Base.get_extension(@__MODULE__, name)
+    isnothing(ext) && error("Load $package first (using $package) in an environment where it is installed.")
+    return ext
 end
 
-"""
-    _optimizer(solver::String; solver_method::String="primal", warm_start::Bool=false)
+_gurobi_optimizer(sm::String) = _require_extension(:DiFloTGurobiExt, "Gurobi").make_optimizer(sm)
 
-Construct a JuMP optimizer with specific attributes based on the backend.
-Supports `"HiGHS"` (default) and `"Gurobi"` (via the package extension).
+"""
+    _optimizer(solver; solver_method="primal", warm_start=false)
+
+Construct a single-threaded optimizer. Reuse of an MCCP model is independent
+of the chosen simplex strategy; basis reuse is backend-dependent.
 """
 function _optimizer(solver::String; solver_method::String="primal", warm_start::Bool=false)
-    s = lowercase(solver)
-    sm = lowercase(solver_method)
-
+    s, sm = lowercase(solver), lowercase(solver_method)
+    sm in ("primal", "dual", "network", "auto") ||
+        throw(ArgumentError("Unknown solver method '$solver_method'."))
     if s == "highs"
-        opt = HiGHS.Optimizer
-        if warm_start || sm == "primal"
-            return JuMP.optimizer_with_attributes(opt, "solver" => "simplex", "simplex_strategy" => 1)
-        elseif sm == "dual"
-            return JuMP.optimizer_with_attributes(opt, "solver" => "simplex", "simplex_strategy" => 2)
-        end
-        return opt
+        sm == "network" && throw(ArgumentError("HiGHS has no network simplex option."))
+        strategy = sm == "primal" ? 4 : (sm == "dual" ? 1 : 0)
+        return JuMP.optimizer_with_attributes(HiGHS.Optimizer,
+                    "solver" => "simplex", "simplex_strategy" => strategy,
+                    "threads" => 1)
     elseif s == "gurobi"
-        # This dispatches to the extension if Gurobi is loaded.
-        # If Gurobi is not loaded, it triggers the fallback error above.
-        return _gurobi_optimizer(sm) 
+        return _gurobi_optimizer(sm)
     end
-    error("Unknown solver '$solver'.")
+    throw(ArgumentError("Unknown solver '$solver'."))
 end

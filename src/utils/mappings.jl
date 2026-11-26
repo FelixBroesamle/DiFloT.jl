@@ -1,31 +1,18 @@
-"""
-    arc_key(e::Arc) -> Tuple{Int,Int,Int}
-
-Returns the unique `(tail, head, parallel_index)` tuple for an Arc.
-"""
+"""Return the unique arc key (tail, head, parallel index)."""
 arc_key(e::Arc) = (e.tail, e.head, e.parallel_index)
 
-"""
-    incidence_mapping(net::NetworkInstance) -> (incoming, outgoing)
-
-Returns dictionaries mapping each node to its incoming and outgoing arc keys.
-"""
+"""Return incoming and outgoing arc keys for each node."""
 function incidence_mapping(net::NetworkInstance)
     incoming = [Tuple{Int,Int,Int}[] for _ in 1:net.num_nodes]
     outgoing = [Tuple{Int,Int,Int}[] for _ in 1:net.num_nodes]
     for e in net.arcs
-        k = arc_key(e)
-        push!(outgoing[e.tail], k)
-        push!(incoming[e.head], k)
+        push!(outgoing[e.tail], arc_key(e))
+        push!(incoming[e.head], arc_key(e))
     end
     return incoming, outgoing
 end
 
-"""
-    adjacency_mapping(net::NetworkInstance) -> (incoming, outgoing)
-
-Returns arrays mapping each node to its neighboring nodes (tails and heads).
-"""
+"""Return incoming and outgoing neighboring nodes for each node."""
 function adjacency_mapping(net::NetworkInstance)
     incoming = [Int[] for _ in 1:net.num_nodes]
     outgoing = [Int[] for _ in 1:net.num_nodes]
@@ -36,15 +23,11 @@ function adjacency_mapping(net::NetworkInstance)
     return incoming, outgoing
 end
 
-"""
-    positional_incidence(net::NetworkInstance) -> (incoming, outgoing)
-
-Returns arrays mapping each node to the positions (indices) of its incident arcs in `net.arcs`.
-"""
+"""Return incoming and outgoing arc positions for each node."""
 function positional_incidence(net::NetworkInstance)
     incoming = [Int[] for _ in 1:net.num_nodes]
     outgoing = [Int[] for _ in 1:net.num_nodes]
-    for (i, e) in enumerate(net.arcs)
+    for (i,e) in enumerate(net.arcs)
         push!(outgoing[e.tail], i)
         push!(incoming[e.head], i)
     end

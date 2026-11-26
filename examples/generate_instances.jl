@@ -1,40 +1,28 @@
 using DiFloT
 
-function generate_instances()
-    files = ["diflot_netgen_1_10.min", "diflot_gridgen_1_10.min", "diflot_gridgen_2_10.min"]
-    data_dir = joinpath(@__DIR__, "..", "data")
-    
-    for file in files
-        path = joinpath(data_dir, file)
-        if !isfile(path)
-            println("Skipping $file (not found)")
+# Small illustrative inputs only. The paper uses the separate experiment project.
+function generate_instances(data_dir=joinpath(@__DIR__,"..","data"))
+    for file in sort(filter(f->endswith(f,".min"),readdir(data_dir)))
+        net = parse_min(joinpath(data_dir,file))
+        s,t = net.source,net.sink
+        sp = compute_shortest_path(net,s,t)
+        mf = compute_max_static_flow(net,s,t).value
+        if !isfinite(sp) || mf == 0
+            println("Skipping disconnected network $file")
             continue
         end
-        
-        net = parse_min(path)
-        s, t = net.source, net.sink
-        println("Processing $file (Source: $s, Sink: $t)")
-        
-        # 1. Generate MDFP instances (Factors: 3, 10, 30 * Shortest Path)
-        sp = compute_shortest_path(net, s, t)
-        for factor in [3, 10, 30]
-            net_mdfp = deepcopy(net)
-            net_mdfp.problem_type = :MDFP
-            net_mdfp.target_value = factor * sp
-            out_name = replace(file, ".min" => "_T$(factor)SP.mdfp")
-            save_min(net_mdfp, joinpath(data_dir, out_name))
-            println("  Generated $out_name (T = $(net_mdfp.target_value))")
-        end
-        
-        # 2. Generate QFP instances (Factors: 2, 5, 10 * Max Flow)
-        mf = compute_max_static_flow(net, s, t).value
-        for factor in [2, 5, 10]
-            net_qfp = deepcopy(net)
-            net_qfp.problem_type = :QFP
-            net_qfp.target_value = factor * mf
-            out_name = replace(file, ".min" => "_F$(factor)MF.qfp")
-            save_min(net_qfp, joinpath(data_dir, out_name))
-            println("  Generated $out_name (F = $(net_qfp.target_value))")
+        for (kind,factors,scale,suffix) in ((:MDFP,(3,10,30),Int(sp),"SP"),(:QFP,(2,5,10),mf,"MF"))
+            for factor in factors
+                out = deepcopy(net)
+                out.problem_type = kind
+                out.target_value = Float64(Base.Checked.checked_mul(factor,scale))
+                name = replace(file,".min"=>"_$(kind)_$(factor)$(suffix).$(lowercase(string(kind)))")
+                path = joinpath(data_dir,name)
+                if !isfile(path)
+                    save_min(out,path)
+                    println("Generated $name")
+                end
+            end
         end
     end
 end

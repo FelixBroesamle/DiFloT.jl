@@ -1,42 +1,42 @@
-using GraphsFlows
+function _max_flow_value(I::Vector{Int}, J::Vector{Int}, V::Vector{Int},
+                         n::Int, s::Int, t::Int, solver::String)
+    if lowercase(solver) == "ortools"
+        return _ortools_request(1,I,J,V,n,s,t).value
+    elseif lowercase(solver) == "graphsflows"
+        # Sparse construction sums capacities of parallel arcs.
+        capacity_matrix = sparse(I,J,V,n,n)
+        flow_graph = Graphs.SimpleDiGraph(capacity_matrix)
+        f_val, _ = GraphsFlows.maximum_flow(flow_graph,s,t,capacity_matrix;
+                                          algorithm=GraphsFlows.PushRelabelAlgorithm())
+        return _rounded_flow(f_val, "maximum-flow value")
+    end
+    throw(ArgumentError("Unknown max-flow solver '$solver'."))
+end
 
 """
-    compute_max_static_flow(net, s, t)
+    compute_max_static_flow(net, s, t; solver="GraphsFlows")
 
-Computes the maximum static flow value `g_max` using the pure Julia `GraphsFlows.jl` backend
-with Sparse Matrices and Dinic's Algorithm for optimal performance.
+Computes the integral maximum static flow value using push-relabel.
 
 # Arguments
-- `net`: The `NetworkInstance` containing the network topology.
-- `s`: The source node ID.
-- `t`: The sink node ID.
+- `net`: The `NetworkInstance`.
+- `s`, `t`: Source and sink nodes.
+- `solver`: `"GraphsFlows"` or `"ORTools"`.
 
 # Returns
-A `NamedTuple` with fields `status` (`STATUS_OPTIMAL` or `STATUS_INFEASIBLE`) and `value` (the maximum flow).
-`value` is exact: since all capacities are integers, the max-flow value is integral, and we round the (float)
-result to the nearest integer.
+A named tuple with fields `status` and `value`.
+A value of zero is a valid optimum, not a solver failure.
 """
-function compute_max_static_flow(net::NetworkInstance, s::Int, t::Int)
-    n = net.num_nodes
-    
-    # Build the sparse capacity matrix directly from the arcs
-    I = Int[]
-    J = Int[]
-    V = Float64[]
-    
+function compute_max_static_flow(net::NetworkInstance, s::Int, t::Int; solver::String="GraphsFlows")
+    _validate_network(net,s,t)
+    I, J, V = Int[], Int[], Int[]
     for e in net.arcs
         if e.tail != e.head && e.up > 0
-            push!(I, e.tail)
-            push!(J, e.head)
-            push!(V, Float64(e.up))
+            push!(I,e.tail); push!(J,e.head); push!(V,e.up)
         end
     end
-    
-    # Sparse automatically sums capacities for parallel arcs!
-    capacity_matrix = sparse(I, J, V, n, n)
-    flow_graph = Graphs.SimpleDiGraph(capacity_matrix)
-    
-    # Run Dinic's Algorithm on the sparse matrix
-    f_val, _ = GraphsFlows.maximum_flow(flow_graph, s, t, capacity_matrix, algorithm=GraphsFlows.PushRelabelAlgorithm())
-    return (status = STATUS_OPTIMAL, value = round(Int64, f_val))
+    (isempty(V) || c_rate_bound(net,s,t) == 0) && return (status=STATUS_OPTIMAL,value=0)
+    f = _max_flow_value(I,J,V,net.num_nodes,s,t,solver)
+    0 <= f <= c_rate_bound(net,s,t) || error("Invalid maximum-flow value $f.")
+    return (status=STATUS_OPTIMAL,value=f)
 end
