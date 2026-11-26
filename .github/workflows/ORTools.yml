@@ -32,4 +32,13 @@ jobs:
         run: python -m pip install ortools==9.12.4544 numpy
 
       - name: Run integration tests
-        run: julia --project=. --threads=1 -e 'ENV["DIFLOT_PYTHON"] = Sys.which("python"); using Pkg; Pkg.instantiate(); Pkg.test()'
+        run: julia --project=. --threads=1 -e 'ENV["DIFLOT_PYTHON"] = Sys.which("python"); using Pkg; Pkg.instantiate(); Pkg.test(coverage=true)'
+    
+      - name: Process Julia coverage
+        uses: julia-actions/julia-processcoverage@v1
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
