@@ -24,8 +24,6 @@ and this
 ### Added
 - Added a validation check to ensure that `F` is an integer in QFP.
 
-## [Unreleased]
-
 ## [0.1.0] - 2026-11-05
 ### Added
 - Initialized project.

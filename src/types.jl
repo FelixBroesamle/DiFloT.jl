@@ -13,8 +13,7 @@ struct Arc
     parallel_index::Int
 end
 
-Arc(tail::Int, head::Int, low::Int, up::Int, transit_time::Int) =
-    Arc(tail, head, low, up, transit_time, 0)
+Arc(tail::Int, head::Int, low::Int, up::Int, transit_time::Int) = Arc(tail, head, low, up, transit_time, 0)
 
 """
     NetworkInstance
@@ -46,33 +45,44 @@ mutable struct NetworkInstance
 end
 
 """
-    NetworkInstance(start_nodes, end_nodes, capacities, transit_times;
-                    source=1, sink=2, target_value=1.0)
+    NetworkInstance(
+        start_nodes, end_nodes, capacities, transit_times;
+        source=1, sink=2, target_value=1.0
+    )
 
 Construct a network from arrays. Lower bounds are zero.
 """
-function NetworkInstance(start_nodes::Vector{Int}, end_nodes::Vector{Int},
-                         capacities::Vector{Int}, transit_times::Vector{Int};
-                         source::Int=1, sink::Int=2, target_value::Real=1.0)
+function NetworkInstance(
+    start_nodes::Vector{Int}, end_nodes::Vector{Int}, capacities::Vector{Int}, transit_times::Vector{Int};
+    source::Int=1, sink::Int=2, target_value::Real=1.0
+)
     length(start_nodes) == length(end_nodes) == length(capacities) == length(transit_times) ||
         throw(ArgumentError("Array lengths must match."))
+    
     all(>(0), start_nodes) && all(>(0), end_nodes) ||
         throw(ArgumentError("Node IDs must be positive."))
+    
     source >= 0 && sink >= 0 || throw(ArgumentError("Invalid terminal ID."))
     all(>=(0), capacities) || throw(ArgumentError("Negative capacity."))
     all(>=(0), transit_times) || throw(ArgumentError("Negative transit time."))
+    
     m = length(start_nodes)
     n = max(source, sink, maximum(start_nodes; init=0), maximum(end_nodes; init=0))
+    
     arcs = Arc[]
     arc_indices = Dict{Tuple{Int,Int},Vector{Int}}()
+    
     for i in 1:m
         tail, head = start_nodes[i], end_nodes[i]
         indices = get!(arc_indices, (tail, head), Int[])
+    
         push!(arcs, Arc(tail, head, 0, capacities[i], transit_times[i], length(indices)))
         push!(indices, i)
     end
-    return NetworkInstance(n, m, collect(1:n), arcs, :MIN, source, sink,
-                           _target_float(target_value), arc_indices)
+    
+    return NetworkInstance(
+        n, m, collect(1:n), arcs, :MIN, source, sink, _target_float(target_value), arc_indices
+    )
 end
 
 const PathFlow = Tuple{Vector{Int},Float64}
@@ -122,8 +132,7 @@ struct QFResult
     safeguard_activations::Int
 end
 
-QFResult(status, time_T, static_flow) =
-    QFResult(status, time_T, static_flow, PathFlow[], 0, 0, 0)
+QFResult(status, time_T, static_flow) = QFResult(status, time_T, static_flow, PathFlow[], 0, 0, 0)
 
 """
     LPCandidate

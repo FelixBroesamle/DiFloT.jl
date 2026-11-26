@@ -2,6 +2,7 @@
 function _require_extension(name::Symbol, package::String)
     ext = Base.get_extension(@__MODULE__, name)
     isnothing(ext) && error("Load $package first (using $package) in an environment where it is installed.")
+    
     return ext
 end
 
@@ -20,9 +21,13 @@ function _optimizer(solver::String; solver_method::String="primal", warm_start::
     if s == "highs"
         sm == "network" && throw(ArgumentError("HiGHS has no network simplex option."))
         strategy = sm == "primal" ? 4 : (sm == "dual" ? 1 : 0)
-        return JuMP.optimizer_with_attributes(HiGHS.Optimizer,
-                    "solver" => "simplex", "simplex_strategy" => strategy,
-                    "threads" => 1)
+    
+        return JuMP.optimizer_with_attributes(
+            HiGHS.Optimizer,
+            "solver" => "simplex", 
+            "simplex_strategy" => strategy,
+            "threads" => 1
+        )
     elseif s == "gurobi"
         return _gurobi_optimizer(sm)
     end
