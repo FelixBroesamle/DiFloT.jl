@@ -50,7 +50,7 @@ end
     @test session.calls == 3
     @test DiFloT._illinois(x->x^2-0.25,-0.25,0.75,100,1e-10) ≈ 0.5 atol=1e-8
     
-    # Paper's interpolation example, including the steep exponent b=24.
+    # Interpolation example, including a steep exponent b=24.
     r_l = DiFloT.MCCPResult(0,1.0,1.0,Float64[])
     r_u = DiFloT.MCCPResult(0,66.0,7.0,Float64[])
     

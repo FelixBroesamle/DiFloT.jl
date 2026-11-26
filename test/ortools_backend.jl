@@ -47,11 +47,11 @@
             end
             
             # A nontrivial network with shared arcs and several breakpoints.
-            paper = parse_min(joinpath(@__DIR__,"..","data","example.min"))
+            example = parse_min(joinpath(@__DIR__,"..","data","example.min"))
             for (T,expected) in ((3,0),(4,1),(5,3),(6,7),(7,11),(8,17),(15,66))
-                hi = solve_max_dynamic_flow(paper,1,5,T;solver="HiGHS",solver_method="dual",with_paths=false)
-                ff = solve_max_dynamic_flow(paper,1,5,T;solver="ORTools",with_paths=false)
-                te = solve_max_dynamic_flow(paper,1,5,T;method="TE",max_flow_solver="ORTools",with_paths=false)
+                hi = solve_max_dynamic_flow(example,1,5,T;solver="HiGHS",solver_method="dual",with_paths=false)
+                ff = solve_max_dynamic_flow(example,1,5,T;solver="ORTools",with_paths=false)
+                te = solve_max_dynamic_flow(example,1,5,T;method="TE",max_flow_solver="ORTools",with_paths=false)
                 @test hi.status == ff.status == te.status == STATUS_OPTIMAL
                 @test hi.value == ff.value == te.value == expected
                 @test isempty(hi.paths) && isempty(ff.paths)
@@ -75,19 +75,19 @@
             end
         end
 
-        @testset "QFP: paper's mixed-backend configuration" begin
-            paper = parse_min(joinpath(@__DIR__,"..","data","example.min"))
+        @testset "QFP: mixed-backend configuration" begin
+            example = parse_min(joinpath(@__DIR__,"..","data","example.min"))
             
             # Known optima, independently checked via OR-Tools time expansion.
             for (F,T) in ((1,4),(7,6),(12,8),(24,9),(25,10))
-                v = solve_max_dynamic_flow(paper,1,5,T;method="TE",max_flow_solver="ORTools").value
-                prev = solve_max_dynamic_flow(paper,1,5,T-1;method="TE",max_flow_solver="ORTools").value
+                v = solve_max_dynamic_flow(example,1,5,T;method="TE",max_flow_solver="ORTools").value
+                prev = solve_max_dynamic_flow(example,1,5,T-1;method="TE",max_flow_solver="ORTools").value
                 @test prev < F <= v
             
                 for method in ("BS","IBS","INT","INT-SG","NEWT")
             
                     r = solve_quickest_flow(
-                        paper,1,5,F;
+                        example,1,5,F;
                         method=method,solver="HiGHS", solver_method="primal",max_flow_solver="ORTools",
                         with_paths=false,verify=false
                     )
@@ -95,12 +95,12 @@
                     @test r.mccp_calls >= 1 && r.lp_calls == 0
                 end
                 
-                candidate = solve_lp_candidate(paper,1,5,F;solver="HiGHS",solver_method="dual")
+                candidate = solve_lp_candidate(example,1,5,F;solver="HiGHS",solver_method="dual")
                 @test candidate.status == STATUS_OPTIMAL && candidate.lp_calls == 1
                 @test abs(candidate.time_T-T) <= 1 # LP-only is not certified exact.
                 
                 checked = check_lp_candidate(
-                    paper,1,5,F,candidate;
+                    example,1,5,F,candidate;
                     solver="HiGHS", solver_method="primal",with_paths=false,verify=false
                 )
                 @test checked.status == STATUS_OPTIMAL && checked.time_T == T
@@ -109,11 +109,11 @@
         end
         
         @testset "Integer QFP oracles with OR-Tools" begin
-            paper = parse_min(joinpath(@__DIR__, "..", "data", "example.min"))
+            example = parse_min(joinpath(@__DIR__, "..", "data", "example.min"))
             for (F, T) in ((1,4), (7,6), (12,8), (24,9), (25,10))
                 for method in ("BS", "IBS", "INT", "INT-SG")
                     r = solve_quickest_flow(
-                        paper, 1, 5, F;
+                        example, 1, 5, F;
                         method=method, solver="ORTools", max_flow_solver="ORTools"
                     )
                     @test r.status == STATUS_OPTIMAL && r.time_T == T
@@ -122,7 +122,7 @@
             end
             for method in ("NEWT", "LP")
                 @test_throws ArgumentError solve_quickest_flow(
-                    paper, 1, 5, 12;
+                    example, 1, 5, 12;
                     method=method, solver="ORTools"
                 )
             end

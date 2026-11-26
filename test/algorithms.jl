@@ -1,4 +1,4 @@
-@testset "Paper's running example" begin
+@testset "Example" begin
     net = NetworkInstance(
         [1,1,1,2,2,3,3,4], [2,3,4,3,5,5,4,5],
         [2,2,3,1,1,2,2,4], [1,3,7,1,5,3,1,1]; 
