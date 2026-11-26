@@ -1,111 +1,74 @@
-# =============================================================================
-# Newton-type search for the Quickest Flow Problem
-# =============================================================================
-# Implements Algorithm 5 from the paper (§3.3), with:
-#   - Integer-demand enforcement
-#   - Exact T_l via rounded g_max
-#   - Safety cap on iterations
-#   - Floor-then-+1 verification (matches paper's two-step check)
-# =============================================================================
-
 """
-    _eval_param(session::MCCPSession, theta::Float64) -> (v, g)
+    solve_qf_newton(net,s,t,F;solver="HiGHS",solver_method="primal", ...)
 
-Evaluate the MCCP oracle at a real-valued `theta`. Returns `(v, g)`.
-On solver failure, returns `(0.0, 0.0)` — the caller must guard.
+Newton-type search with the revised termination criterion |v(theta)-F|<1.
+The real oracle uses the same model and cache as integer evaluations.
+An invalid numerical step is reported rather than treated as convergence.
 """
-function _eval_param(session::MCCPSession, theta::Float64)
-    coeff = -(theta + 1.0)
-    JuMP.set_objective_coefficient(session.model, session.x_ret, coeff)
-    session.last_coefficient = coeff
-    JuMP.optimize!(session.model)
-
-    if termination_status(session.model) != MOI.OPTIMAL
-        return (v = 0.0, g = 0.0)
-    end
-
-    flows = Vector{Float64}(undef, session.net.num_arcs)
-    for (i, e) in enumerate(session.net.arcs)
-        xv = JuMP.value(session.x[arc_key(e)])
-        flows[i] = abs(xv) < 1e-9 ? 0.0 : xv
-    end
-    session.last_result = MCCPResult(
-        STATUS_OPTIMAL,
-        -objective_value(session.model),
-        JuMP.value(session.x_ret),
-        flows,
+function solve_qf_newton(
+    net, s::Int, t::Int, F::Real; 
+    solver::String="HiGHS", solver_method::String="primal", max_flow_solver::String="GraphsFlows",
+    max_iter::Int=1000, with_paths::Bool=false, verify::Bool=false
+)
+    lowercase(solver) == "ortools" &&
+        throw(ArgumentError("Newton search requires a real-valued MCCP oracle."))
+    F_int = _positive_demand(F)
+    max_iter > 0 || throw(ArgumentError("newton_max_iter must be positive."))
+    
+    # Initialize the lower bound and its MCCP solution.
+    init = _initial_lower(
+        net, s, t, F_int;
+        solver=solver, solver_method=solver_method, max_flow_solver=max_flow_solver
     )
-    return (v = session.last_result.v, g = session.last_result.g)
-end
+    isnothing(init) && return _infeasible_qf()
+    (; session, T_l, r_l) = init
 
-"""
-    solve_qf_newton(net, s, t, F; solver="HiGHS", solver_method="primal")
-
-Solve the Quickest Flow Problem via the Newton-type search of Burkard et al.
-This implements Algorithm 5.
-
-The demand `F` must be integer-valued; otherwise the termination criterion
-`|v(θ) - F| < 1` no longer implies `T* ∈ {⌊θ⌋, ⌊θ⌋+1}`.
-"""
-function solve_qf_newton(net, s::Int, t::Int, F::Number; solver::String="HiGHS", solver_method::String="primal")
-    Fq = Float64(F)
-
-    # ----------------------------------------------------------------- 
-    # Certificates
-    # -----------------------------------------------------------------
-    T0f = compute_shortest_path(net, s, t)
-    isinf(T0f) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
-    
-    mf = compute_max_static_flow(net, s, t)
-    (mf.status != STATUS_OPTIMAL || mf.value == 0) && return QFResult(STATUS_INFEASIBLE, -1.0, Float64[])
-    
-    gmax = round(Int64, mf.value)
-
-    session = MCCPSession(net, s, t; solver=solver, solver_method=solver_method)
-
-    # -----------------------------------------------------------------
-    # Initial lower bound
-    # -----------------------------------------------------------------
-    e0 = _eval_param(session, 0.0)
-    Tl = max(round(Int64, T0f), ceil(Int64, max(0.0, (Fq - e0.v) / gmax)))
-    theta = Float64(Tl)
-    cur = _eval_param(session, theta)
-
-    # Early return: T_l already feasible
-    if cur.v >= Fq
-        return QFResult(STATUS_OPTIMAL, Float64(Tl), session.last_result.flows)
-    end
-
-    # -----------------------------------------------------------------
-    # Newton iterations: paper's criterion `While |v(θ) - F| ≥ 1`
-    # -----------------------------------------------------------------
-    iter = 0
-    max_iter = 1000
-    while abs(cur.v - Fq) >= 1.0
-        iter += 1
-        iter > max_iter && error(
-            "Newton failed to converge in $max_iter iterations " *
-            "(θ = $theta, v = $(cur.v), g = $(cur.g), F = $Fq)"
+    # The lower bound is optimal if it already satisfies the demand.
+    if _value(r_l) >= F_int
+        return _qf_result(
+            session, T_l, r_l, F_int;
+            with_paths=with_paths, verify=verify
         )
+    end
 
-        # Safety: slope must be positive to take a Newton step
-        if cur.g <= 1e-9
-            break
+    # Start the real-valued search at the integer lower bound.
+    theta = Float64(T_l)
+    cur = r_l
+    iter = 0
+
+    # Stop on the objective residual, not the length of a Newton step.
+    while abs(cur.v - F_int) >= 1.0
+        iter += 1
+        iter <= max_iter || error("Newton search exceeded $max_iter iterations.")
+        cur.g >= 1.0 || error("Invalid Newton subgradient $(cur.g).")
+
+        # Intersect the current supporting line with the demand.
+        next_theta = theta + (F_int - cur.v) / cur.g
+        isfinite(next_theta) && next_theta >= T_l || error("Invalid Newton iterate $next_theta.")
+        next_theta != theta || error("Newton search stagnated before meeting the residual criterion.")
+        
+        # After the first step, the iterates must be nonincreasing.
+        if iter > 1 && next_theta > theta
+            error("Newton search lost monotonicity before convergence.")
         end
-
-        theta = theta + (Fq - cur.v) / cur.g
-        cur   = _eval_param(session, theta)
+        
+        theta = next_theta
+        cur = solve_mccp(session, theta)
     end
 
-    # -----------------------------------------------------------------
-    # Two-step verification: T* ∈ {⌊θ⌋, ⌊θ⌋+1}
-    # -----------------------------------------------------------------
-    T = floor(Int64, theta)
-    r = _eval_param(session, Float64(T))
-    if r.v >= Fq
-        return QFResult(STATUS_OPTIMAL, Float64(T), session.last_result.flows)
+    # Recover the discrete optimum: floor(theta) or floor(theta) + 1
+    # under the exact-oracle assumptions.
+    T = floor(Int, theta)
+    r = solve_mccp(session, T)
+    predecessor_checked = _value(r) < F_int
+    
+    if predecessor_checked
+        T += 1
+        r = solve_mccp(session, T)
     end
-
-    _eval_param(session, Float64(T + 1))
-    return QFResult(STATUS_OPTIMAL, Float64(T + 1), session.last_result.flows)
+    
+    return _qf_result(
+        session, T, r, F_int;
+        with_paths=with_paths, verify=verify, predecessor_checked=predecessor_checked
+    )
 end

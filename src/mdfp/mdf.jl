@@ -1,45 +1,60 @@
 """
-    solve_max_dynamic_flow(net, s, t, T; method="FF", solver="HiGHS", solver_method="primal")
+    solve_max_dynamic_flow(net, s, t, T; method="FF", solver="HiGHS",
+                           solver_method="primal", max_flow_solver="GraphsFlows",
+                           with_paths=true)
 
 Solves the Maximum Dynamic Flow Problem (MDFP).
 
 # Arguments
 - `net`: The `NetworkInstance`.
 - `s`, `t`: Source and sink nodes.
-- `T`: The time horizon.
-- `method`: `"FF"` (Ford-Fulkerson) or `"TE"` (Time-Expanded network).
-- `solver`: If `method="TE"`, passing `"HiGHS"` or `"Gurobi"` uses a Linear Program. Passing any other string (e.g., `"GraphsFlows"`) uses the highly optimized pure Julia Sparse Dinic algorithm.
-- `solver_method`: `"primal"`, `"dual"`, or `"network"`.
+- `T`: Nonnegative integer time-horizon.
+- `method`: `"FF"` (Ford--Fulkerson) or `"TE"` (time-expanded network).
+- `solver`: MCCP backend (`"HiGHS"`, `"ORTools"`, or `"Gurobi"`).
+- `solver_method`: `"primal"` or `"dual"` for LP-based backends.
+- `max_flow_solver`: Maximum-flow backend (`"GraphsFlows"` or `"ORTools"`).
+- `with_paths`: Include the path decomposition for FF.
 
 # Returns
-An `MDFResult` containing the `status`, `value` (maximum flow), and decomposed `paths`.
+An `MDFResult` containing the maximum flow value and, for FF, static arc
+flows and optional paths. TE returns the value only.
 """
-function solve_max_dynamic_flow(net, s::Int, t::Int, T::Int; method::String="FF", solver::String="HiGHS", solver_method::String="primal")
+function solve_max_dynamic_flow(
+    net, s::Int, t::Int, T::Int;
+    method::String="FF", solver::String="HiGHS", solver_method::String="primal", max_flow_solver::String="GraphsFlows", 
+    with_paths::Bool=true
+)
+    _validate_network(net, s, t)
+    _check_horizon(net, s, t, T)
+    method in ("FF", "TE") || throw(ArgumentError("Unknown method '$method'."))
+
+    # No flow can arrive before the shortest-path transit time.
     T0 = compute_shortest_path(net, s, t)
     if isinf(T0) || T0 > T
-        return MDFResult(STATUS_OPTIMAL, 0.0, Float64[], Tuple{Vector{Int},Float64}[])
+        flows = method == "FF" ? zeros(Float64, net.num_arcs) : Float64[]
+        return MDFResult(STATUS_OPTIMAL, 0.0, flows, PathFlow[])
     end
-    
+
+    # Ford--Fulkerson: solve one MCCP and optionally decompose the static flow.
     if method == "FF"
-        session = MCCPSession(net, s, t; solver=solver, solver_method=solver_method)
-        res = solve_mccp(session, T)
-        
-        if res.status == STATUS_OPTIMAL
-            paths = decompose_flow_into_paths(net, s, t, res.flows)
-            return MDFResult(STATUS_OPTIMAL, res.v, res.flows, paths)
+        if lowercase(solver) == "ortools"
+            res = _ortools_mccp(net, s, t, T)
         else
-            return MDFResult(STATUS_INFEASIBLE, 0.0, Float64[], Tuple{Vector{Int},Float64}[])
+            session = MCCPSession(net, s, t; solver=solver, solver_method=solver_method)
+            res = solve_mccp(session, T)
         end
-        
-    elseif method == "TE"
-        #s_lower = lowercase(solver)
-        #if s_lower == "highs" || s_lower == "gurobi"
-        #    return solve_max_dynamic_flow_te_lp(net, s, t, T, solver, solver_method)
-        #else
-            # Defaults to GraphsFlows (Sparse Dinic)
-        return solve_max_dynamic_flow_te(net, s, t, T)
-        #end
-    else
-        error("Unknown method '$method'.")
+
+        paths = with_paths ? decompose_flow_into_paths(net, s, t, res.flows; T=T) : PathFlow[]
+
+        return MDFResult(STATUS_OPTIMAL, res.v, res.flows, paths)
     end
+
+    # Preserve TE's original combinatorial default; solver can also select
+    # a max-flow backend explicitly for convenience.
+    backend = lowercase(solver) in ("graphsflows", "ortools") ? solver : max_flow_solver
+
+    return solve_max_dynamic_flow_te(net, s, t, T; solver=backend)
 end
+
+"""Alias for [`solve_max_dynamic_flow`](@ref)."""
+solve_maximum_dynamic_flow(args...; kwargs...) = solve_max_dynamic_flow(args...; kwargs...)

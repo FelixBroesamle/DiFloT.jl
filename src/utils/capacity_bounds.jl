@@ -1,11 +1,7 @@
-"""
-    c_rate_bound(net::NetworkInstance, s::Int, t::Int) -> Int
-
-Computes the upper bound on the static max flow `g_max`, which is the minimum of the total capacity
-leaving the source and the total capacity entering the sink.
-"""
+"""Upper bound on the static flow rate (the smaller terminal cut)."""
 function c_rate_bound(net::NetworkInstance, s::Int, t::Int)
-    out_s = sum(e.up for e in net.arcs if e.tail == s; init = 0)
-    in_t  = sum(e.up for e in net.arcs if e.head == t; init = 0)
-    return min(out_s, in_t)
+    out_s = sum(Int128(e.up) for e in net.arcs if e.tail == s && e.head != s; init=Int128(0))
+    in_t = sum(Int128(e.up) for e in net.arcs if e.head == t && e.tail != t; init=Int128(0))
+    
+    return Int(min(out_s, in_t))
 end
